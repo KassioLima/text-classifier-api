@@ -1,5 +1,7 @@
 import csv
 import json
+import os
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -8,7 +10,15 @@ jsonDatasetTrainName = "datasets/database.json"  # dados extraídos do banco em 
 datasetTrainName = "datasets/dataset-train.csv"
 datasetEvaluationName = "datasets/dataset-evaluation.csv"
 percentual_validacao = 0.2
-sampleSize = 100
+sampleSize = 5000
+
+
+def removeLastLineBlank(datasetName: str):
+    # remove a linha em branco no final do arquivo
+    with open(datasetName, 'rb+') as file:
+        file.seek(-2, os.SEEK_END)
+        file.truncate()
+        file.close()
 
 
 def preprocess_text(text):
@@ -28,6 +38,8 @@ def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, datasetName, teste
             df[coluna_texto] = df[coluna_texto].apply(preprocess_text)
 
     df.to_csv(datasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
+    
+    removeLastLineBlank(datasetName)
 
     print("\nDataset csv gerado com sucesso! (" + datasetName + ")\n")
 
@@ -56,6 +68,9 @@ def montarDataSetEvaluation(datasetName, evaluationDatasetName, column_class):
     # Salve os conjuntos de treino e validação em arquivos CSV separados
     df_treino.to_csv(datasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
     df_validacao.to_csv(evaluationDatasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
+    
+    removeLastLineBlank(datasetName)
+    removeLastLineBlank(evaluationDatasetName)
 
     print("Datasets separados com sucesso!")
 

@@ -1,15 +1,17 @@
 import traceback
 from CustomResponse import Response
 from fastapi import FastAPI
+
+from printUtils import greenText
 from service import AiModelService as AMS, AiModel
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
-    AiModel.init(1)
-    AMS.init(False)
-    print("\033[92mINFO:     API PRONTA PARA USO!\033[0m")
+    AiModel.init(modelIndex=0)
+    AMS.init(testing=True)
+    print(greenText("INFO:     API PRONTA PARA USO!"))
 
 @app.get("/apiStatus")
 async def apiStatus():
