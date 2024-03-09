@@ -7,7 +7,9 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
-    AiModel.init()
+    AiModel.init(1)
+    AMS.init(False)
+    print("\033[92mINFO:     API PRONTA PARA USO!\033[0m")
 
 @app.get("/apiStatus")
 async def apiStatus():
