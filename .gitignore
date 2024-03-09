@@ -1,0 +1,11 @@
+.idea/
+__pychache__/
+.env
+venv/
+models/*
+!models/*.txt
+datasets/*
+!datasets/*.json
+!datasets/teste/
+datasets/teste/*
+!datasets/teste/*.txt
