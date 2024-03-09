@@ -7,7 +7,13 @@ from printUtils import greenText
 
 
 class AiModel:
+    
+    # TODO: TREINAR UM MODELO APENAS PARA CLASSIFICAR PRODUTOS
+    # TODO: TREINAR UM MODELO APENAS PARA CLASSIFICAR ASSUNTOS
+    # TODO: USAR AMBOS OS MODELOS PROPOSTOS ACIMA SIMULTANEAMENTE
+    
     modelOptions = [
+        {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "KassioLima/autotrain-rac-test-5000-cardiffnlp-roberta-base", "name": "rac-roberta-5000-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
