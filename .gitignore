@@ -2,8 +2,8 @@
 __pycache__/
 .env
 venv/
-models/*
-!models/*.txt
+#models/*
+#!models/*.txt
 datasets/*
 !datasets/*.json
 !datasets/teste/

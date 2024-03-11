@@ -10,7 +10,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     AiModelProduto.init(modelIndex=0)
-    AiModelAssunto.init(modelIndex=1)
+    AiModelAssunto.init(modelIndex=0)
     AMS.init(testing=False)
     print(greenText("INFO:     API PRONTA PARA USO!"))
 

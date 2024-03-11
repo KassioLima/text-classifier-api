@@ -1,18 +1,18 @@
 import asyncio
 import json
+import time
+
 from transformers import pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification as AutoModel
 from constraints import Constraints
 from printUtils import greenText
 
 
-# TODO: TREINAR UM MODELO APENAS PARA CLASSIFICAR PRODUTOS [IN PROGRESS]
-# TODO: TREINAR UM MODELO APENAS PARA CLASSIFICAR ASSUNTOS [IN PROGRESS]
-
-
 class AiModelProduto:
     
     modelOptions = [
+        {"path": "./models/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "local-rac-produto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "KassioMaminfo/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "rac-produto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
@@ -36,7 +36,9 @@ class AiModelProduto:
 
 class AiModelAssunto:
     modelOptions = [
-        {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "./models/autotrain-rac-8801-assunto-cardiffnlp-roberta-base", "name": "local-rac-assunto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
+        # {"path": "KassioLima/autotrain-rac-8801-assunto-cardiffnlp-roberta-base", "name": "rac-assunto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
+        # {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
     
@@ -71,6 +73,7 @@ class AiModelService:
         
     @staticmethod
     async def classifyByAiModel(prompt, AiModel):
+        tempo_inicio = time.time()
         num_tokens_before_truncation = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.model.config.max_position_embeddings, truncation=False, return_tensors="pt")["input_ids"].shape[1]
         
         tokens = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.getModelAttr('tokens'), truncation=True, return_tensors="pt")
@@ -80,6 +83,7 @@ class AiModelService:
         
         classifier = pipeline(AiModel.getModelAttr('task'), model=AiModel.model, tokenizer=AiModel.tokenizer)
         results = (await asyncio.to_thread(classifier, decoded_prompt))
+        tempo_fim = time.time()
         
         result = results[0]
         
@@ -90,9 +94,10 @@ class AiModelService:
         result['tokensBeforeTruncation'] = num_tokens_before_truncation
         result['processedCharacteres'] = len(decoded_prompt)
         result['processedTokens'] = num_tokens
+        result['milliseconds'] = (tempo_fim - tempo_inicio) * 1000
         
-        if 'autotrain-rac' in AiModel.modelOptions[AiModel.model_index]['path']:
-            result['label'] = json.loads(result['label'].replace("'", '"'))
+        # if 'autotrain-rac' in AiModel.modelOptions[AiModel.model_index]['path']:
+        #     result['label'] = json.loads(result['label'].replace("'", '"'))
         
         return result
     
