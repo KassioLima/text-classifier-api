@@ -6,26 +6,33 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-jsonDatasetTrainName = "datasets/database.json"  # dados extraídos do banco em 07/03/2024
-datasetTrainName = "datasets/dataset-train.csv"
-datasetEvaluationName = "datasets/dataset-evaluation.csv"
+# jsonDatasetTrainName = "datasets/database.json"  # dados extraídos do banco em 07/03/2024
+jsonDatasetTrainName = "datasets/database-email-sep.json"  # dados extraídos do banco em 11/03/2024
+
+datasetProdutoTrainName = "datasets/dataset-produto-train.csv"
+datasetProdutoEvaluationName = "datasets/dataset-produto-evaluation.csv"
+
+datasetAssuntoTrainName = "datasets/dataset-assunto-train.csv"
+datasetAssuntoEvaluationName = "datasets/dataset-assunto-evaluation.csv"
+
 percentual_validacao = 0.2
-sampleSize = 5000
+sampleSize = 100
 
 
 def removeLastLineBlank(datasetName: str):
     # remove a linha em branco no final do arquivo
-    with open(datasetName, 'rb+') as file:
-        file.seek(-2, os.SEEK_END)
-        file.truncate()
-        file.close()
+    # with open(datasetName, 'rb+') as file:
+    #     file.seek(-2, os.SEEK_END)
+    #     file.truncate()
+    #     file.close()
+    pass
 
 
-def preprocess_text(text):
-    return json.dumps(text)[1:-1].replace('"', '\\"')
+def preprocess_text(text: str):
+    return json.dumps(text.strip())[1:-1].replace('"', '\\"')
 
 
-def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, datasetName, teste=False):
+def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, textColumn, targetColumn, datasetName, teste=False):
     global sampleSize
 
     df = pd.read_json(jsonSource)
@@ -36,7 +43,12 @@ def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, datasetName, teste
     if sourceColumnsToPreprocess is not None:
         for coluna_texto in sourceColumnsToPreprocess:
             df[coluna_texto] = df[coluna_texto].apply(preprocess_text)
-
+    
+    df = df[[textColumn, targetColumn]]
+    df.columns = ['text', 'target']
+    
+    df = df.drop_duplicates()
+            
     df.to_csv(datasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
     
     removeLastLineBlank(datasetName)
@@ -44,8 +56,9 @@ def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, datasetName, teste
     print("\nDataset csv gerado com sucesso! (" + datasetName + ")\n")
 
 
-def montarDataSetEvaluation(datasetName, evaluationDatasetName, column_class):
+def montarDataSetEvaluation(datasetName, evaluationDatasetName):
     global percentual_validacao
+    column_class = "target"
 
     # Carregue o conjunto de dados de treino
     df_treino = pd.read_csv(datasetName, encoding='utf-8')
@@ -75,20 +88,30 @@ def montarDataSetEvaluation(datasetName, evaluationDatasetName, column_class):
     print("Datasets separados com sucesso!")
 
 
+def montarDataSetTrainEvaluation(jsonDatasetName, sourceColumnsToPreprocess, textColumn, targetColumn, datasetTrainName, datasetValidationName, teste=False):
+    if teste:
+        datasetTrainName = parseToTesteName(datasetTrainName)
+        datasetValidationName = parseToTesteName(datasetValidationName)
+    
+    montarDataSetTrain(jsonSource=jsonDatasetName, sourceColumnsToPreprocess=sourceColumnsToPreprocess, textColumn=textColumn, targetColumn=targetColumn, datasetName=datasetTrainName, teste=teste)
+    verificarConsistenciaDataSet(datasetName=datasetTrainName)
+    
+    montarDataSetEvaluation(datasetName=datasetTrainName, evaluationDatasetName=datasetValidationName)
+    verificarConsistenciaDataSet(datasetName=datasetValidationName)
+
+
 def montarDatasets():
     global jsonDatasetTrainName
-    global datasetTrainName
-    global datasetEvaluationName
-
-    montarDataSetTrain(jsonDatasetTrainName, ['text'], datasetTrainName, False)
-    verificarConsistenciaDataSet(datasetTrainName)
-    montarDataSetEvaluation(datasetTrainName, datasetEvaluationName, "target")
-    verificarConsistenciaDataSet(datasetEvaluationName)
-
-    montarDataSetTrain(jsonDatasetTrainName, ['text'], parseToTesteName(datasetTrainName), True)
-    verificarConsistenciaDataSet(parseToTesteName(datasetTrainName))
-    montarDataSetEvaluation(parseToTesteName(datasetTrainName), parseToTesteName(datasetEvaluationName), "target")
-    verificarConsistenciaDataSet(parseToTesteName(datasetEvaluationName))
+    global datasetProdutoTrainName
+    global datasetProdutoEvaluationName
+    global datasetAssuntoTrainName
+    global datasetAssuntoEvaluationName
+    
+    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='produto', datasetTrainName=datasetProdutoTrainName, datasetValidationName=datasetProdutoEvaluationName)
+    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='assunto', datasetTrainName=datasetAssuntoTrainName, datasetValidationName=datasetAssuntoEvaluationName)
+    
+    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='produto', datasetTrainName=datasetProdutoTrainName, datasetValidationName=datasetProdutoEvaluationName, teste=True)
+    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='assunto', datasetTrainName=datasetAssuntoTrainName, datasetValidationName=datasetAssuntoEvaluationName, teste=True)
 
 
 def verificarConsistenciaDataSet(datasetName):
