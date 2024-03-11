@@ -12,8 +12,6 @@ class AiModelProduto:
     
     modelOptions = [
         {"path": "./models/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "local-rac-produto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
-        {"path": "KassioMaminfo/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "rac-produto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
-        {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
     
@@ -37,8 +35,6 @@ class AiModelProduto:
 class AiModelAssunto:
     modelOptions = [
         {"path": "./models/autotrain-rac-8801-assunto-cardiffnlp-roberta-base", "name": "local-rac-assunto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
-        # {"path": "KassioLima/autotrain-rac-8801-assunto-cardiffnlp-roberta-base", "name": "rac-assunto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
-        # {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
     

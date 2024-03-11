@@ -34,11 +34,7 @@ def sumarizeModel(indexModel: int):
 
 
 def analiseModels():
-    modelOptions = [
-        {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
-        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
-    ]
-    
+    modelOptions = AiModelProduto.modelOptions
     modelOptions.sort(key=lambda x: x["tokens"])
     sumariesModel = [sumarizeModel(i) for i in range(len(modelOptions))]
     
