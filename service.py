@@ -69,33 +69,40 @@ class AiModelService:
         if AiModelService.testingMode:
             AiModelService.promptGigante = Constraints.promptTeste
             print(greenText("INFO:     Prompt de teste carregado."))
-            
+        
     @staticmethod
-    async def classify(prompt):
-        if AiModelService.promptGigante is not None:
-            prompt = AiModelService.promptGigante
+    async def classifyByAiModel(prompt, AiModel):
+        num_tokens_before_truncation = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.model.config.max_position_embeddings, truncation=False, return_tensors="pt")["input_ids"].shape[1]
         
-        num_tokens_before_truncation = AiModelProduto.tokenizer.encode_plus(prompt, max_length=AiModelProduto.model.config.max_position_embeddings, truncation=False, return_tensors="pt")["input_ids"].shape[1]
-        
-        tokens = AiModelProduto.tokenizer.encode_plus(prompt, max_length=AiModelProduto.getModelAttr('tokens'), truncation=True, return_tensors="pt")
+        tokens = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.getModelAttr('tokens'), truncation=True, return_tensors="pt")
         num_tokens = tokens["input_ids"].shape[1]
         
-        decoded_prompt = AiModelProduto.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
+        decoded_prompt = AiModel.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
         
-        classifier = pipeline(AiModelProduto.getModelAttr('task'), model=AiModelProduto.model, tokenizer=AiModelProduto.tokenizer)
+        classifier = pipeline(AiModel.getModelAttr('task'), model=AiModel.model, tokenizer=AiModel.tokenizer)
         results = (await asyncio.to_thread(classifier, decoded_prompt))
         
         result = results[0]
         
-        result['task'] = AiModelProduto.getModelAttr('task')
-        result['model'] = AiModelProduto.getModelAttr('name')
-        result['maxTokens'] = AiModelProduto.getModelAttr('tokens')
+        result['task'] = AiModel.getModelAttr('task')
+        result['model'] = AiModel.getModelAttr('name')
+        result['maxTokens'] = AiModel.getModelAttr('tokens')
         result['characteresBeforeTruncation'] = len(prompt)
         result['tokensBeforeTruncation'] = num_tokens_before_truncation
         result['processedCharacteres'] = len(decoded_prompt)
         result['processedTokens'] = num_tokens
         
-        if 'autotrain-rac' in AiModelProduto.modelOptions[AiModelProduto.model_index]['path']:
+        if 'autotrain-rac' in AiModel.modelOptions[AiModel.model_index]['path']:
             result['label'] = json.loads(result['label'].replace("'", '"'))
         
         return result
+    
+    @staticmethod
+    async def classify(prompt):
+        if AiModelService.promptGigante is not None:
+            prompt = AiModelService.promptGigante
+        
+        resultProduto = (await AiModelService.classifyByAiModel(prompt, AiModelProduto))
+        resultAssunto = (await AiModelService.classifyByAiModel(prompt, AiModelAssunto))
+        
+        return {"produto": resultProduto, "assunto": resultAssunto}
