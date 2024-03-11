@@ -1,7 +1,8 @@
 import pandas as pd
-from service import AiModelProduto, AiModelService
+from service import AiModelProduto, AiModelService, AiModelAssunto
 import matplotlib.pyplot as plt
 import seaborn as sns
+import asyncio
 
 def obterMaxCaracteresFromModel() -> int:
     safetyValue = 40
@@ -32,8 +33,7 @@ def sumarizeModel(indexModel: int):
         "percentualPromptsForaDoLimite": str(round((outLimit / total) * 100, 2)) + "%"
     }
 
-
-def analiseModels():
+def compareModelsByTokensLimit():
     modelOptions = AiModelProduto.modelOptions
     modelOptions.sort(key=lambda x: x["tokens"])
     sumariesModel = [sumarizeModel(i) for i in range(len(modelOptions))]
@@ -56,10 +56,8 @@ def analiseModels():
         
         plt.show()
 
-
 def count_characters(text):
     return len(str(text))
-
 
 def sumarizeDataset():
     df = pd.read_json("datasets/database-email-sep.json")
@@ -107,7 +105,47 @@ def sumarizeDataset():
     
     plt.show()
     
+def contarPercentualLinhas(rowNumber, dfLength):
+    if (rowNumber / dfLength * 100) % 1 == 0:
+        print(str(rowNumber).rjust(len(str(dfLength)), "0") + " / " + str(dfLength) + "\t" + str(int(rowNumber / dfLength * 100)) + "%")
+    
+async def obterPercentualAcertosModelo(modelo, df, targetColumn):
+    dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score', 'isCorrect'])
+    
+    # df = df.head(100)
+    
+    print("\nAnalizando acertos para \"" + targetColumn + "\"...")
+    # print("\n" + "0".rjust(len(str(len(df))), "0") + " / " + str(len(df)) + "\t0%")
+    
+    dfLength = len(df)
+    
+    for index, row in df.iterrows():
+        
+        # contarPercentualLinhas(index + 1, dfLength)
+        
+        result = await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo)
+        
+        nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (result['label'] == row[targetColumn])]
+        
+        dfAnalise.loc[len(dfAnalise)] = nova_linha
+        
+    print("\n==========================RESULTADOS==========================\n")
+    # print(dfAnalise)
+    # print("==============================================")
+    print(dfAnalise.describe())
+    print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
+    
+async def analizeModelsPerformance():
+    AiModelProduto.init(modelIndex=0)
+    AiModelAssunto.init(modelIndex=0)
+    AiModelService.init(testing=False)
+    
+    df = pd.read_json("datasets/database-email-sep.json")
+    
+    await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
+    print("\n==============================================================")
+    await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
 
-if __name__ == "__main__":
-    sumarizeDataset()
-    analiseModels()
+sumarizeDataset()
+compareModelsByTokensLimit()
+asyncio.run(analizeModelsPerformance())
