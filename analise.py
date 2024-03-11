@@ -9,14 +9,14 @@ def obterMaxCaracteresFromModel() -> int:
     return len(AiModel.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)) - safetyValue
 
 def sumarizeModel(indexModel: int):
-    df = pd.read_json("datasets/database.json")
+    df = pd.read_json("datasets/database-email-sep.json")
     
     AiModel.init(modelIndex=indexModel)
     AiModelService.init(testing=True)
     
     maxLen = obterMaxCaracteresFromModel()
     
-    df['length'] = df['text'].apply(len)
+    df['length'] = df['DetalhesDaDemanda'].apply(len)
     
     onLimit = len(df[df['length'] <= maxLen])
     outLimit = len(df[df['length'] > maxLen])
@@ -34,8 +34,13 @@ def sumarizeModel(indexModel: int):
 
 
 def analiseModels():
-    AiModel.modelOptions.sort(key=lambda x: x["tokens"])
-    sumariesModel = [sumarizeModel(i) for i in range(len(AiModel.modelOptions))]
+    modelOptions = [
+        {"path": "KassioMaminfo/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "rac-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
+    ]
+    
+    modelOptions.sort(key=lambda x: x["tokens"])
+    sumariesModel = [sumarizeModel(i) for i in range(len(modelOptions))]
     
     for sumary in sumariesModel:
         valor_total = sumary['promptsTotais']
@@ -61,8 +66,8 @@ def count_characters(text):
 
 
 def sumarizeDataset():
-    df = pd.read_json("datasets/database.json")
-    df['text_length'] = df['text'].apply(count_characters)
+    df = pd.read_json("datasets/database-email-sep.json")
+    df['text_length'] = df['DetalhesDaDemanda'].apply(count_characters)
     
     classSize = 1000
     
