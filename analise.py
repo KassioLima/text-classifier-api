@@ -1,17 +1,17 @@
 import pandas as pd
-from service import AiModel, AiModelService
+from service import AiModelProduto, AiModelService
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 def obterMaxCaracteresFromModel() -> int:
     safetyValue = 40
-    tokens = AiModel.tokenizer.encode_plus(AiModelService.promptGigante, max_length=AiModel.getModelAttr('tokens'), truncation=True, return_tensors="pt")
-    return len(AiModel.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)) - safetyValue
+    tokens = AiModelProduto.tokenizer.encode_plus(AiModelService.promptGigante, max_length=AiModelProduto.getModelAttr('tokens'), truncation=True, return_tensors="pt")
+    return len(AiModelProduto.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)) - safetyValue
 
 def sumarizeModel(indexModel: int):
     df = pd.read_json("datasets/database-email-sep.json")
     
-    AiModel.init(modelIndex=indexModel)
+    AiModelProduto.init(modelIndex=indexModel)
     AiModelService.init(testing=True)
     
     maxLen = obterMaxCaracteresFromModel()
@@ -23,7 +23,7 @@ def sumarizeModel(indexModel: int):
     total = onLimit + outLimit
     
     return {
-        "modelo": AiModel.getModelAttr('name'),
+        "modelo": AiModelProduto.getModelAttr('name'),
         "tamanhoMaximoPrompt": maxLen,
         "promptsTotais": total,
         "promptsNoLimite": onLimit,
