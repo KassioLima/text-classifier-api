@@ -135,6 +135,31 @@ async def obterPercentualAcertosModelo(modelo, df, targetColumn):
     print(dfAnalise.describe())
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
+async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetColumnModelo1, targetColumnModelo2):
+    dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score_' + targetColumnModelo1, 'score_' + targetColumnModelo2, 'isCorrect'])
+    
+    # df = df.head(10)
+    
+    print("\nAnalizando acertos para \"" + targetColumnModelo1 + "\" e \"" + targetColumnModelo2 + "\"...")
+    
+    for index, row in df.iterrows():
+        
+        resultModelo1 = (await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo1))
+        resultModelo2 = (await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo2))
+        
+        nova_linha = [
+            resultModelo1['milliseconds'] + resultModelo2['milliseconds'],
+            resultModelo1['processedCharacteres'],
+            resultModelo1['score'],
+            resultModelo2['score'],
+            (resultModelo1['label'] == row[targetColumnModelo1] and resultModelo2['label'] == row[targetColumnModelo2])]
+        
+        dfAnalise.loc[len(dfAnalise)] = nova_linha
+    
+    print("\n==========================RESULTADOS==========================\n")
+    print(dfAnalise.describe())
+    print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
+    
 async def analizeModelsPerformance():
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
@@ -142,10 +167,12 @@ async def analizeModelsPerformance():
     
     df = pd.read_json("datasets/database-email-sep.json")
     
-    await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
-    print("\n==============================================================")
-    await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
+    # await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
+    # print("\n==============================================================")
+    # await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
+    # print("\n==============================================================")
+    await obterPercentualAcertosModelosCombinados(AiModelProduto, AiModelAssunto, df, 'produto', 'assunto')
 
-sumarizeDataset()
-compareModelsByTokensLimit()
+# sumarizeDataset()
+# compareModelsByTokensLimit()
 asyncio.run(analizeModelsPerformance())
