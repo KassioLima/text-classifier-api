@@ -8,6 +8,29 @@ from constraints import Constraints
 from printUtils import greenText
 
 
+class AiModelProdutoAssunto:
+    modelOptions = [
+        {"path": "./models/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "local-rac-produto-assunto-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
+    ]
+    
+    model_index = None
+    model = None
+    tokenizer = None
+    
+    @staticmethod
+    def getModelAttr(attr: str):
+        return AiModelProdutoAssunto.modelOptions[AiModelProdutoAssunto.model_index][attr]
+    
+    @staticmethod
+    def init(modelIndex: int):
+        AiModelProdutoAssunto.model_index = modelIndex
+        
+        AiModelProdutoAssunto.model = AutoModel.from_pretrained(AiModelProdutoAssunto.getModelAttr('path'))
+        print(greenText("INFO:     Modelo carregado (\"" + AiModelProdutoAssunto.getModelAttr('name') + "\")"))
+        AiModelProdutoAssunto.tokenizer = AutoTokenizer.from_pretrained(AiModelProdutoAssunto.getModelAttr('path'))
+        print(greenText("INFO:     Tokenizer carregado"))
+
 class AiModelProduto:
     
     modelOptions = [
@@ -102,6 +125,11 @@ class AiModelService:
         if AiModelService.promptGigante is not None:
             prompt = AiModelService.promptGigante
         
+        # Inicializou o modelo AiModelProdutoAssunto
+        if AiModelProdutoAssunto.model_index is not None:
+            resultProdutoAssunto = (await AiModelService.classifyByAiModel(prompt, AiModelProdutoAssunto))
+            return resultProdutoAssunto
+            
         resultProduto = (await AiModelService.classifyByAiModel(prompt, AiModelProduto))
         resultAssunto = (await AiModelService.classifyByAiModel(prompt, AiModelAssunto))
         

@@ -3,12 +3,13 @@ from CustomResponse import Response
 from fastapi import FastAPI
 
 from printUtils import greenText
-from service import AiModelService as AMS, AiModelProduto, AiModelAssunto
+from service import AiModelService as AMS, AiModelProduto, AiModelAssunto, AiModelProdutoAssunto
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
+    # AiModelProdutoAssunto.init(modelIndex=0)
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
     AMS.init(testing=False)

@@ -1,5 +1,5 @@
 import pandas as pd
-from service import AiModelProduto, AiModelService, AiModelAssunto
+from service import AiModelProduto, AiModelService, AiModelAssunto, AiModelProdutoAssunto
 import matplotlib.pyplot as plt
 import seaborn as sns
 import asyncio
@@ -112,7 +112,7 @@ def contarPercentualLinhas(rowNumber, dfLength):
 async def obterPercentualAcertosModelo(modelo, df, targetColumn):
     dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score', 'isCorrect'])
     
-    # df = df.head(100)
+    # df = df.head(1000)
     
     print("\nAnalizando acertos para \"" + targetColumn + "\"...")
     # print("\n" + "0".rjust(len(str(len(df))), "0") + " / " + str(len(df)) + "\t0%")
@@ -125,7 +125,13 @@ async def obterPercentualAcertosModelo(modelo, df, targetColumn):
         
         result = await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo)
         
-        nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (result['label'] == row[targetColumn])]
+        if ',' not in targetColumn:
+            nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (result['label'] == row[targetColumn])]
+        else:
+            columns = targetColumn.split(',')
+            label = '{\'' + columns[0] + '\': \'' + row[columns[0]] + '\', \'' + columns[1] + '\': \'' + row[columns[1]] + '\'}'
+            
+            nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (result['label'] == label)]
         
         dfAnalise.loc[len(dfAnalise)] = nova_linha
         
@@ -161,18 +167,21 @@ async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetCo
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
 async def analizeModelsPerformance():
+    AiModelProdutoAssunto.init(modelIndex=0)
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
     AiModelService.init(testing=False)
     
     df = pd.read_json("datasets/database-email-sep.json")
     
-    # await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
-    # print("\n==============================================================")
-    # await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
-    # print("\n==============================================================")
+    await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
+    print("\n==============================================================")
+    await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
+    print("\n==============================================================")
     await obterPercentualAcertosModelosCombinados(AiModelProduto, AiModelAssunto, df, 'produto', 'assunto')
+    print("\n==============================================================")
+    await obterPercentualAcertosModelo(AiModelProdutoAssunto, df, 'produto,assunto')
 
-# sumarizeDataset()
-# compareModelsByTokensLimit()
+sumarizeDataset()
+compareModelsByTokensLimit()
 asyncio.run(analizeModelsPerformance())
