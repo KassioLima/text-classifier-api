@@ -33,8 +33,7 @@ class AiModelProdutoAssunto:
 
 class AiModelTipoDemanda:
     modelOptions = [
-        # "./models/autotrain-rac-9099-tipo-cardiffnlp-roberta-base"
-        {"path": "./models/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "local-rac-tipo-roberta-9099-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "./models/autotrain-rac-9099-tipo-cardiffnlp-roberta-base", "name": "local-rac-tipo-roberta-9099-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
     
