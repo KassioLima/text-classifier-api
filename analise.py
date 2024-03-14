@@ -112,16 +112,9 @@ def contarPercentualLinhas(rowNumber, dfLength):
 async def obterPercentualAcertosModelo(modelo, df, targetColumn):
     dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score', 'isCorrect'])
     
-    # df = df.head(1000)
-    
     print("\nAnalizando acertos para \"" + targetColumn + "\"...")
-    # print("\n" + "0".rjust(len(str(len(df))), "0") + " / " + str(len(df)) + "\t0%")
-    
-    dfLength = len(df)
     
     for index, row in df.iterrows():
-        
-        # contarPercentualLinhas(index + 1, dfLength)
         
         result = await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo)
         
@@ -136,15 +129,11 @@ async def obterPercentualAcertosModelo(modelo, df, targetColumn):
         dfAnalise.loc[len(dfAnalise)] = nova_linha
         
     print("\n==========================RESULTADOS==========================\n")
-    # print(dfAnalise)
-    # print("==============================================")
     print(dfAnalise.describe())
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
 async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetColumnModelo1, targetColumnModelo2):
     dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score_' + targetColumnModelo1, 'score_' + targetColumnModelo2, 'isCorrect'])
-    
-    # df = df.head(10)
     
     print("\nAnalizando acertos para \"" + targetColumnModelo1 + "\" e \"" + targetColumnModelo2 + "\"...")
     
@@ -173,6 +162,8 @@ async def analizeModelsPerformance():
     AiModelService.init(testing=False)
     
     df = pd.read_json("datasets/database-email-sep.json")
+    
+    # df = df.sample(100)
     
     await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
     print("\n==============================================================")
