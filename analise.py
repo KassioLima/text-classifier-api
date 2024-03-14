@@ -163,7 +163,7 @@ async def analizeModelsPerformance():
     
     df = pd.read_json("datasets/database-email-sep.json")
     
-    # df = df.sample(100)
+    # df = df.sample(10)
     
     await obterPercentualAcertosModelo(AiModelProduto, df, 'produto')
     print("\n==============================================================")
