@@ -75,7 +75,7 @@ def sumarizeDataset():
     contagem_por_classe = df['classe'].value_counts().sort_index()
     
     # Filtrar classes com menos de 10 observações
-    classes_validas = contagem_por_classe[contagem_por_classe >= 10].index
+    classes_validas = contagem_por_classe[contagem_por_classe >= 15].index
     
     # Filtrar DataFrame para incluir apenas observações nas classes válidas
     df_filtrado = df[df['classe'].isin(classes_validas)]
