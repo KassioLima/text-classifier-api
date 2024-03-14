@@ -6,14 +6,11 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-# jsonDatasetTrainName = "datasets/database.json"  # dados extraídos do banco em 07/03/2024
-jsonDatasetTrainName = "datasets/database-email-sep.json"  # dados extraídos do banco em 11/03/2024
+jsonDatasetName = "datasets/database-email-sep.json"  # dados extraídos do banco em 11/03/2024
 
-datasetProdutoTrainName = "datasets/dataset-produto-train.csv"
-datasetProdutoEvaluationName = "datasets/dataset-produto-evaluation.csv"
-
-datasetAssuntoTrainName = "datasets/dataset-assunto-train.csv"
-datasetAssuntoEvaluationName = "datasets/dataset-assunto-evaluation.csv"
+datasetTipoName = "datasets/dataset-tipo.csv"
+datasetProdutoName = "datasets/dataset-produto.csv"
+datasetAssuntoName = "datasets/dataset-assunto.csv"
 
 percentual_validacao = 0.2
 sampleSize = 100
@@ -88,30 +85,16 @@ def montarDataSetEvaluation(datasetName, evaluationDatasetName):
     print("Datasets separados com sucesso!")
 
 
-def montarDataSetTrainEvaluation(jsonDatasetName, sourceColumnsToPreprocess, textColumn, targetColumn, datasetTrainName, datasetValidationName, teste=False):
+def montarDataSetTrainEvaluation(jsonDataset, sourceColumnsToPreprocess, textColumn, targetColumn, datasetTrainName, datasetValidationName, teste=False):
     if teste:
         datasetTrainName = parseToTesteName(datasetTrainName)
         datasetValidationName = parseToTesteName(datasetValidationName)
     
-    montarDataSetTrain(jsonSource=jsonDatasetName, sourceColumnsToPreprocess=sourceColumnsToPreprocess, textColumn=textColumn, targetColumn=targetColumn, datasetName=datasetTrainName, teste=teste)
+    montarDataSetTrain(jsonSource=jsonDataset, sourceColumnsToPreprocess=sourceColumnsToPreprocess, textColumn=textColumn, targetColumn=targetColumn, datasetName=datasetTrainName, teste=teste)
     verificarConsistenciaDataSet(datasetName=datasetTrainName)
     
     montarDataSetEvaluation(datasetName=datasetTrainName, evaluationDatasetName=datasetValidationName)
     verificarConsistenciaDataSet(datasetName=datasetValidationName)
-
-
-def montarDatasets():
-    global jsonDatasetTrainName
-    global datasetProdutoTrainName
-    global datasetProdutoEvaluationName
-    global datasetAssuntoTrainName
-    global datasetAssuntoEvaluationName
-    
-    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='produto', datasetTrainName=datasetProdutoTrainName, datasetValidationName=datasetProdutoEvaluationName)
-    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='assunto', datasetTrainName=datasetAssuntoTrainName, datasetValidationName=datasetAssuntoEvaluationName)
-    
-    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='produto', datasetTrainName=datasetProdutoTrainName, datasetValidationName=datasetProdutoEvaluationName, teste=True)
-    montarDataSetTrainEvaluation(jsonDatasetName=jsonDatasetTrainName, sourceColumnsToPreprocess=['DetalhesDaDemanda'], textColumn='DetalhesDaDemanda', targetColumn='assunto', datasetTrainName=datasetAssuntoTrainName, datasetValidationName=datasetAssuntoEvaluationName, teste=True)
 
 
 def verificarConsistenciaDataSet(datasetName):
@@ -132,8 +115,20 @@ def verificarConsistenciaDataSet(datasetName):
         raise Exception(f"O DataFrame contém linhas duplicadas | {datasetName}")
 
 
+def addSuffix(name: str, suffix: str):
+    return name.split(".")[0] + "-" + suffix + "." + name.split(".")[1]
+
+
 def parseToTesteName(name: str):
-    return name.split("/")[0] + "/teste/" + name.split("/")[1].split(".")[0] + "-teste." + name.split(".")[1]
+    return addSuffix(name.split("/")[0] + "/teste/" + name.split("/")[1], 'teste')
+
+
+def parseToTrainName(name: str):
+    return addSuffix(name, 'train')
+
+
+def parseToEvaluationName(name: str):
+    return addSuffix(name, 'evaluation')
 
 
 def verificarNumeroDeClasses(dataframe1, dataframe2, column_class):
@@ -149,6 +144,43 @@ def verificarNumeroDeClasses(dataframe1, dataframe2, column_class):
         print(str_num_classes_dataframe2)
     else:
         raise Exception(f"A quantidade de classes está ERRADA.\nA quantidade de classes em ambos os dataframes devem ser IGUAIS!\n{str_num_classes_dataframe1}\n{str_num_classes_dataframe2}")
+
+
+def datasetsConfigs():
+    global jsonDatasetName
+    global datasetTipoName
+    global datasetProdutoName
+    global datasetAssuntoName
+    
+    return [
+        {
+            "jsonDatasetName": jsonDatasetName,
+            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
+            "textColumn": 'DetalhesDaDemanda',
+            "targetColumn": 'TipoDeDemanda',
+            "datasetName": datasetTipoName,
+        },
+        {
+            "jsonDatasetName": jsonDatasetName,
+            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
+            "textColumn": 'DetalhesDaDemanda',
+            "targetColumn": 'produto',
+            "datasetName": datasetProdutoName,
+        },
+        {
+            "jsonDatasetName": jsonDatasetName,
+            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
+            "textColumn": 'DetalhesDaDemanda',
+            "targetColumn": 'assunto',
+            "datasetName": datasetAssuntoName,
+        }
+    ]
+
+
+def montarDatasets():
+    for datasetConfig in datasetsConfigs():
+        montarDataSetTrainEvaluation(jsonDataset=datasetConfig['jsonDatasetName'], sourceColumnsToPreprocess=datasetConfig['sourceColumnsToPreprocess'], textColumn=datasetConfig['textColumn'], targetColumn=datasetConfig['targetColumn'], datasetTrainName=addSuffix(datasetConfig['datasetName'], 'train'), datasetValidationName=addSuffix(datasetConfig['datasetName'], 'evaluation'))
+        montarDataSetTrainEvaluation(jsonDataset=datasetConfig['jsonDatasetName'], sourceColumnsToPreprocess=datasetConfig['sourceColumnsToPreprocess'], textColumn=datasetConfig['textColumn'], targetColumn=datasetConfig['targetColumn'], datasetTrainName=addSuffix(datasetConfig['datasetName'], 'train'), datasetValidationName=addSuffix(datasetConfig['datasetName'], 'evaluation'), teste=True)
 
 
 if __name__ == '__main__':
