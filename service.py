@@ -31,6 +31,30 @@ class AiModelProdutoAssunto:
         AiModelProdutoAssunto.tokenizer = AutoTokenizer.from_pretrained(AiModelProdutoAssunto.getModelAttr('path'))
         print(greenText("INFO:     Tokenizer carregado"))
 
+class AiModelTipoDemanda:
+    modelOptions = [
+        # "./models/autotrain-rac-9099-tipo-cardiffnlp-roberta-base"
+        {"path": "./models/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "local-rac-tipo-roberta-9099-512", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
+    ]
+    
+    model_index = None
+    model = None
+    tokenizer = None
+    
+    @staticmethod
+    def getModelAttr(attr: str):
+        return AiModelTipoDemanda.modelOptions[AiModelTipoDemanda.model_index][attr]
+    
+    @staticmethod
+    def init(modelIndex: int):
+        AiModelTipoDemanda.model_index = modelIndex
+        
+        AiModelTipoDemanda.model = AutoModel.from_pretrained(AiModelTipoDemanda.getModelAttr('path'))
+        print(greenText("INFO:     Modelo carregado (\"" + AiModelTipoDemanda.getModelAttr('name') + "\")"))
+        AiModelTipoDemanda.tokenizer = AutoTokenizer.from_pretrained(AiModelTipoDemanda.getModelAttr('path'))
+        print(greenText("INFO:     Tokenizer carregado"))
+
 class AiModelProduto:
     
     modelOptions = [
@@ -129,8 +153,36 @@ class AiModelService:
         if AiModelProdutoAssunto.model_index is not None:
             resultProdutoAssunto = (await AiModelService.classifyByAiModel(prompt, AiModelProdutoAssunto))
             return resultProdutoAssunto
-            
+        
+        resultTipo = (await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda))
         resultProduto = (await AiModelService.classifyByAiModel(prompt, AiModelProduto))
         resultAssunto = (await AiModelService.classifyByAiModel(prompt, AiModelAssunto))
         
-        return {"produto": resultProduto, "assunto": resultAssunto}
+        return {"tipo": resultTipo, "produto": resultProduto, "assunto": resultAssunto}
+    
+    @staticmethod
+    async def classifyTipoDemanda(prompt):
+        if AiModelService.promptGigante is not None:
+            prompt = AiModelService.promptGigante
+        
+        result = (await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda))
+        
+        return {"tipo": result}
+    
+    @staticmethod
+    async def classifyProduto(prompt):
+        if AiModelService.promptGigante is not None:
+            prompt = AiModelService.promptGigante
+        
+        result = (await AiModelService.classifyByAiModel(prompt, AiModelProduto))
+        
+        return {"produto": result}
+    
+    @staticmethod
+    async def classifyAssunto(prompt):
+        if AiModelService.promptGigante is not None:
+            prompt = AiModelService.promptGigante
+        
+        result = (await AiModelService.classifyByAiModel(prompt, AiModelAssunto))
+        
+        return {"assunto": result}
