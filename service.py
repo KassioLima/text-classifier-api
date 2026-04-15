@@ -7,7 +7,6 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification as Au
 from constraints import Constraints
 from printUtils import greenText
 
-
 class AiModelProdutoAssunto:
     modelOptions = [
         {"path": "./models/autotrain-rac-11679-cardiffnlp-roberta-base", "name": "local-rac-produto-assunto-roberta-11679-512", "tokens": 512, "task": "sentiment-analysis"},
@@ -57,6 +56,7 @@ class AiModelTipoDemanda:
 class AiModelProduto:
     
     modelOptions = [
+        {"path": "./models/autotrain-produto-google-bert-base-uncased-9099", "name": "local-rac-produto-google-bert-base-uncased-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "./models/autotrain-rac-8801-produto-cardiffnlp-roberta-base", "name": "local-rac-produto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
         {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
     ]
@@ -81,7 +81,9 @@ class AiModelProduto:
 class AiModelAssunto:
     modelOptions = [
         {"path": "./models/autotrain-rac-8801-assunto-cardiffnlp-roberta-base", "name": "local-rac-assunto-roberta-8801-512", "tokens": 512, "task": "sentiment-analysis"},
-        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"}
+        {"path": "facebook/bart-large-mnli", "name": "facebook-bart-1024", "tokens": 1024, "task": "sentiment-analysis"},
+        {"path": "./meu_modelo_treinado", "name": "proseusAi-finbert", "tokens": 512, "task": "sentiment-analysis"},
+        {"path": "KassioLima/autotrain-yrpuv-1x07g", "name": "autotrain-yrpuv-1x07g", "tokens": 512, "task": "sentiment-analysis"}
     ]
     
     model_index = None
@@ -141,7 +143,15 @@ class AiModelService:
         # if 'autotrain-rac' in AiModel.modelOptions[AiModel.model_index]['path']:
         #     result['label'] = json.loads(result['label'].replace("'", '"'))
         
+        if 'LABEL_' in result['label']:
+            result['label'] = AiModelService.mapLabelToAssunto(result['label'])
+        
         return result
+    
+    @staticmethod
+    def mapLabelToAssunto(labelX: str) -> str:
+        mapemaneto = ['CONTA', 'DESEMPENHO', 'ENTREGA', 'VENDAS', 'REPARO', 'CONTRATO', 'RELACIONAMENTO DE PÓS-VENDA']
+        return mapemaneto[int(labelX.split('_')[1])]
     
     @staticmethod
     async def classify(prompt):

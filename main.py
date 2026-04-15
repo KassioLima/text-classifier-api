@@ -12,7 +12,7 @@ async def startup_event():
     # AiModelProdutoAssunto.init(modelIndex=0)
     AiModelTipoDemanda.init(modelIndex=0)
     AiModelProduto.init(modelIndex=0)
-    AiModelAssunto.init(modelIndex=0)
+    AiModelAssunto.init(modelIndex=3)
     AMS.init(testing=False)
     print(greenText("INFO:     API PRONTA PARA USO!"))
 
