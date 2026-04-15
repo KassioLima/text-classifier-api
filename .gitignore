@@ -2,8 +2,25 @@
 __pycache__/
 .env
 venv/
-#models/*
-#!models/*.txt
+.venv/
+
+# Huge/local binaries and training artifacts
+LM-Studio-*.AppImage
+models/*
+!models/*.txt
+results/
+meu_modelo_treinado/
+modelo_salvo/
+logs/
+runs/
+
+# Python cache/build artifacts
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Datasets policy: keep only curated JSON + test placeholder
 datasets/*
 !datasets/*.json
 !datasets/teste/
