@@ -1,187 +1,244 @@
 import csv
 import json
-import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from prepare_unified_dataset import prepare_unified_dataset
 
 
-jsonDatasetName = "datasets/database-email-sep.json"  # dados extraídos do banco em 11/03/2024
+BASE_DIR = Path(__file__).resolve().parent
+JSON_DATASET_NAME = BASE_DIR / "datasets" / "demandas_unificado_train_ready.json"
 
-datasetTipoName = "datasets/dataset-tipo.csv"
-datasetProdutoName = "datasets/dataset-produto.csv"
-datasetAssuntoName = "datasets/dataset-assunto.csv"
+DATASET_TIPO_NAME = BASE_DIR / "datasets" / "dataset-tipo.csv"
+DATASET_PRODUTO_NAME = BASE_DIR / "datasets" / "dataset-produto.csv"
+DATASET_ASSUNTO_NAME = BASE_DIR / "datasets" / "dataset-assunto.csv"
 
-percentual_validacao = 0.2
-sampleSize = 100
+TEST_DIR = BASE_DIR / "datasets" / "teste"
+REPORTS_DIR = BASE_DIR / "datasets" / "reports"
 
-
-def removeLastLineBlank(datasetName: str):
-    # remove a linha em branco no final do arquivo
-    # with open(datasetName, 'rb+') as file:
-    #     file.seek(-2, os.SEEK_END)
-    #     file.truncate()
-    #     file.close()
-    pass
+VALIDATION_PERCENT = 0.2
+TEST_SAMPLE_SIZE = 100
+RANDOM_STATE = 42
+MIN_CLASS_SAMPLES = 2
+MIN_CLASS_SAMPLES_FOR_EVAL = int(1 / VALIDATION_PERCENT)
 
 
-def preprocess_text(text: str):
+@dataclass(frozen=True)
+class DatasetConfig:
+    name: str
+    text_column: str
+    target_column: str
+    output_base: Path
+    source_columns_to_preprocess: tuple[str, ...]
+
+
+def preprocess_text(text: str) -> str:
+    # Mantem compatibilidade com o pipeline existente, que trabalha com CSV escapado.
     return json.dumps(text.strip())[1:-1].replace('"', '\\"')
 
 
-def montarDataSetTrain(jsonSource, sourceColumnsToPreprocess, textColumn, targetColumn, datasetName, teste=False):
-    global sampleSize
+def ensure_parent(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_json(jsonSource)
+
+def to_train_name(path: Path) -> Path:
+    return path.with_name(f"{path.stem}-train{path.suffix}")
+
+
+def to_evaluation_name(path: Path) -> Path:
+    return path.with_name(f"{path.stem}-evaluation{path.suffix}")
+
+
+def to_test_name(path: Path) -> Path:
+    return TEST_DIR / f"{path.stem}-teste{path.suffix}"
+
+
+def _read_source_df(json_source: Path, text_column: str, target_column: str) -> pd.DataFrame:
+    df = pd.read_json(json_source)
+    required_columns = {text_column, target_column}
+    missing = required_columns.difference(df.columns)
+    if missing:
+        raise KeyError(f"Colunas ausentes no dataset fonte: {sorted(missing)}")
+
+    df = df[[text_column, target_column]].copy()
+    df[text_column] = df[text_column].astype(str).str.strip()
+    df[target_column] = df[target_column].astype(str).str.strip()
+    df = df[(df[text_column] != "") & (df[target_column] != "")]
+    return df
+
+
+def _drop_rare_classes(df: pd.DataFrame, min_class_samples: int) -> tuple[pd.DataFrame, list[str]]:
+    counts = df["target"].value_counts()
+    keep_labels = counts[counts >= min_class_samples].index
+    removed_labels = counts[counts < min_class_samples].index.tolist()
+    filtered = df[df["target"].isin(keep_labels)].copy()
+    return filtered, removed_labels
+
+
+def _write_csv(df: pd.DataFrame, path: Path) -> None:
+    ensure_parent(path)
+    df.to_csv(path, index=False, quoting=csv.QUOTE_ALL, encoding="utf-8")
+
+
+def _validate_dataset(path: Path) -> None:
+    df = pd.read_csv(path, encoding="utf-8")
+    if list(df.columns) != ["text", "target"]:
+        raise ValueError(f"Colunas invalidas em {path}: {list(df.columns)}")
+    if df.isnull().any().any():
+        raise ValueError(f"DataFrame contem nulos: {path}")
+    if df.duplicated().any():
+        raise ValueError(f"DataFrame contem duplicados: {path}")
+    if (df["text"].astype(str).str.strip() == "").any():
+        raise ValueError(f"DataFrame contem texto vazio: {path}")
+    if (df["target"].astype(str).str.strip() == "").any():
+        raise ValueError(f"DataFrame contem target vazio: {path}")
+
+
+def _class_report(df: pd.DataFrame, label: str) -> dict:
+    counts = df["target"].value_counts()
+    return {
+        "label": label,
+        "rows": int(len(df)),
+        "classes": int(counts.shape[0]),
+        "min_class_size": int(counts.min()) if len(counts) else 0,
+        "max_class_size": int(counts.max()) if len(counts) else 0,
+        "class_counts": {str(k): int(v) for k, v in counts.to_dict().items()},
+    }
+
+
+def _save_report(config_name: str, reports: Iterable[dict], extra: dict) -> Path:
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = REPORTS_DIR / f"dataset-{config_name}-report.json"
+    payload = {
+        "config": config_name,
+        "validation_percent": VALIDATION_PERCENT,
+        "random_state": RANDOM_STATE,
+        "min_class_samples": MIN_CLASS_SAMPLES,
+        "min_class_samples_for_eval": MIN_CLASS_SAMPLES_FOR_EVAL,
+        "extra": extra,
+        "reports": list(reports),
+    }
+    report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return report_path
+
+
+def montarDataSetTrainEvaluation(config: DatasetConfig, teste: bool = False) -> None:
+    source_df = _read_source_df(JSON_DATASET_NAME, config.text_column, config.target_column)
+    source_df = source_df.rename(columns={config.text_column: "text", config.target_column: "target"})
+
+    # Evita vazamento por texto duplicado entre treino e validacao.
+    source_df = source_df.drop_duplicates(subset=["text", "target"]).copy()
 
     if teste:
-        df = df.sample(sampleSize)
+        n = min(TEST_SAMPLE_SIZE, len(source_df))
+        source_df = source_df.sample(n=n, random_state=RANDOM_STATE).copy()
 
-    if sourceColumnsToPreprocess is not None:
-        for coluna_texto in sourceColumnsToPreprocess:
-            df[coluna_texto] = df[coluna_texto].apply(preprocess_text)
-    
-    df = df[[textColumn, targetColumn]]
-    df.columns = ['text', 'target']
-    
-    df = df.drop_duplicates()
-            
-    df.to_csv(datasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
-    
-    removeLastLineBlank(datasetName)
+    for text_col in config.source_columns_to_preprocess:
+        if text_col == config.text_column:
+            source_df["text"] = source_df["text"].apply(preprocess_text)
 
-    print("\nDataset csv gerado com sucesso! (" + datasetName + ")\n")
+    min_required = max(MIN_CLASS_SAMPLES, MIN_CLASS_SAMPLES_FOR_EVAL)
+    source_df, removed_labels = _drop_rare_classes(source_df, min_required)
 
+    if source_df.empty:
+        raise ValueError(f"Dataset vazio para '{config.name}' apos filtros de classe.")
 
-def montarDataSetEvaluation(datasetName, evaluationDatasetName):
-    global percentual_validacao
-    column_class = "target"
+    train_df, eval_df = train_test_split(
+        source_df,
+        test_size=VALIDATION_PERCENT,
+        stratify=source_df["target"],
+        random_state=RANDOM_STATE,
+        shuffle=True,
+    )
 
-    # Carregue o conjunto de dados de treino
-    df_treino = pd.read_csv(datasetName, encoding='utf-8')
+    # Garante que nenhuma classe do eval fique ausente no treino.
+    eval_classes = set(eval_df["target"].unique())
+    train_df = train_df[train_df["target"].isin(eval_classes)].copy()
 
-    contagem_classes = df_treino[column_class].value_counts()
-    classes_com_apenas_um_membro = contagem_classes[contagem_classes == 1].index.tolist()
+    if set(train_df["target"].unique()) != eval_classes:
+        raise ValueError(f"Split inconsistente para '{config.name}'.")
 
-    # remove do dataframe de treino os elementos que pertencem à classes com apenas 1 membro
-    df_treino = df_treino[~df_treino[column_class].isin(classes_com_apenas_um_membro)]
+    # Remove possiveis duplicados residuais.
+    train_df = train_df.drop_duplicates()
+    eval_df = eval_df.drop_duplicates()
 
-    # Use train_test_split para dividir o conjunto de treino em treino e validação
-    df_treino, df_validacao = train_test_split(df_treino, test_size=percentual_validacao, stratify=df_treino[column_class])
-
-    # Garanta que o conjunto de validação tenha o mesmo número de classes que o conjunto de treino
-    classes_validacao = df_validacao[column_class].unique()
-    df_treino = df_treino[df_treino[column_class].isin(classes_validacao)]
-
-    verificarNumeroDeClasses(df_treino, df_validacao, column_class)
-
-    # Salve os conjuntos de treino e validação em arquivos CSV separados
-    df_treino.to_csv(datasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
-    df_validacao.to_csv(evaluationDatasetName, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
-    
-    removeLastLineBlank(datasetName)
-    removeLastLineBlank(evaluationDatasetName)
-
-    print("Datasets separados com sucesso!")
-
-
-def montarDataSetTrainEvaluation(jsonDataset, sourceColumnsToPreprocess, textColumn, targetColumn, datasetTrainName, datasetValidationName, teste=False):
+    base_name = config.output_base
     if teste:
-        datasetTrainName = parseToTesteName(datasetTrainName)
-        datasetValidationName = parseToTesteName(datasetValidationName)
-    
-    montarDataSetTrain(jsonSource=jsonDataset, sourceColumnsToPreprocess=sourceColumnsToPreprocess, textColumn=textColumn, targetColumn=targetColumn, datasetName=datasetTrainName, teste=teste)
-    verificarConsistenciaDataSet(datasetName=datasetTrainName)
-    
-    montarDataSetEvaluation(datasetName=datasetTrainName, evaluationDatasetName=datasetValidationName)
-    verificarConsistenciaDataSet(datasetName=datasetValidationName)
-
-
-def verificarConsistenciaDataSet(datasetName):
-    dataFrame = pd.read_csv(datasetName, encoding='utf-8')
-
-    for index, row in dataFrame.iterrows():
-        if len(row) != 2:
-            raise Exception(f"Erro na linha {index}: Número incorreto de colunas - {len(row)} colunas encontradas | {datasetName}")
-
-        for column, value in row.items():
-            if type(value) != type(""):
-                raise Exception(f"Tipo na linha {index}, coluna {column}: {type(value)} | {datasetName}")
-
-    if dataFrame.isnull().any().any():
-        raise Exception(f"O DataFrame contém valores nulos | {datasetName}")
-
-    if dataFrame.duplicated().any():
-        raise Exception(f"O DataFrame contém linhas duplicadas | {datasetName}")
-
-
-def addSuffix(name: str, suffix: str):
-    return name.split(".")[0] + "-" + suffix + "." + name.split(".")[1]
-
-
-def parseToTesteName(name: str):
-    return addSuffix(name.split("/")[0] + "/teste/" + name.split("/")[1], 'teste')
-
-
-def parseToTrainName(name: str):
-    return addSuffix(name, 'train')
-
-
-def parseToEvaluationName(name: str):
-    return addSuffix(name, 'evaluation')
-
-
-def verificarNumeroDeClasses(dataframe1, dataframe2, column_class):
-
-    num_classes_dataframe1 = len(dataframe1[column_class].unique())
-    num_classes_dataframe2 = len(dataframe2[column_class].unique())
-
-    str_num_classes_dataframe1 = "Classes dataframe_1: " + str(num_classes_dataframe1)
-    str_num_classes_dataframe2 = "Classes dataframe_2:  " + str(num_classes_dataframe2)
-
-    if num_classes_dataframe2 == num_classes_dataframe1:
-        print(str_num_classes_dataframe1)
-        print(str_num_classes_dataframe2)
+        train_path = to_test_name(to_train_name(base_name))
+        eval_path = to_test_name(to_evaluation_name(base_name))
     else:
-        raise Exception(f"A quantidade de classes está ERRADA.\nA quantidade de classes em ambos os dataframes devem ser IGUAIS!\n{str_num_classes_dataframe1}\n{str_num_classes_dataframe2}")
+        train_path = to_train_name(base_name)
+        eval_path = to_evaluation_name(base_name)
+
+    _write_csv(train_df, train_path)
+    _write_csv(eval_df, eval_path)
+    _validate_dataset(train_path)
+    _validate_dataset(eval_path)
+
+    report_path = _save_report(
+        config_name=f"{config.name}{'-teste' if teste else ''}",
+        reports=[
+            _class_report(source_df, "source_after_filters"),
+            _class_report(train_df, "train"),
+            _class_report(eval_df, "evaluation"),
+        ],
+        extra={
+            "removed_rare_labels": removed_labels,
+            "train_path": str(train_path),
+            "evaluation_path": str(eval_path),
+        },
+    )
+
+    print(f"\n[{config.name}{' teste' if teste else ''}]")
+    print(f"Train: {train_path}")
+    print(f"Evaluation: {eval_path}")
+    print(f"Report: {report_path}")
+    print(
+        f"Classes train/eval: {train_df['target'].nunique()} / {eval_df['target'].nunique()} | "
+        f"Rows train/eval: {len(train_df)} / {len(eval_df)}"
+    )
+    if removed_labels:
+        print(f"Classes removidas por baixa frequencia (<{min_required}): {removed_labels}")
 
 
-def datasetsConfigs():
-    global jsonDatasetName
-    global datasetTipoName
-    global datasetProdutoName
-    global datasetAssuntoName
-    
+def datasetsConfigs() -> list[DatasetConfig]:
     return [
-        {
-            "jsonDatasetName": jsonDatasetName,
-            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
-            "textColumn": 'DetalhesDaDemanda',
-            "targetColumn": 'TipoDeDemanda',
-            "datasetName": datasetTipoName,
-        },
-        {
-            "jsonDatasetName": jsonDatasetName,
-            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
-            "textColumn": 'DetalhesDaDemanda',
-            "targetColumn": 'produto',
-            "datasetName": datasetProdutoName,
-        },
-        {
-            "jsonDatasetName": jsonDatasetName,
-            "sourceColumnsToPreprocess": ['DetalhesDaDemanda'],
-            "textColumn": 'DetalhesDaDemanda',
-            "targetColumn": 'assunto',
-            "datasetName": datasetAssuntoName,
-        }
+        DatasetConfig(
+            name="tipo",
+            text_column="DetalhesDaDemanda",
+            target_column="TipoDeDemanda",
+            output_base=DATASET_TIPO_NAME,
+            source_columns_to_preprocess=("DetalhesDaDemanda",),
+        ),
+        DatasetConfig(
+            name="produto",
+            text_column="DetalhesDaDemanda",
+            target_column="produto",
+            output_base=DATASET_PRODUTO_NAME,
+            source_columns_to_preprocess=("DetalhesDaDemanda",),
+        ),
+        DatasetConfig(
+            name="assunto",
+            text_column="DetalhesDaDemanda",
+            target_column="assunto",
+            output_base=DATASET_ASSUNTO_NAME,
+            source_columns_to_preprocess=("DetalhesDaDemanda",),
+        ),
     ]
 
 
-def montarDatasets():
-    for datasetConfig in datasetsConfigs():
-        montarDataSetTrainEvaluation(jsonDataset=datasetConfig['jsonDatasetName'], sourceColumnsToPreprocess=datasetConfig['sourceColumnsToPreprocess'], textColumn=datasetConfig['textColumn'], targetColumn=datasetConfig['targetColumn'], datasetTrainName=addSuffix(datasetConfig['datasetName'], 'train'), datasetValidationName=addSuffix(datasetConfig['datasetName'], 'evaluation'))
-        montarDataSetTrainEvaluation(jsonDataset=datasetConfig['jsonDatasetName'], sourceColumnsToPreprocess=datasetConfig['sourceColumnsToPreprocess'], textColumn=datasetConfig['textColumn'], targetColumn=datasetConfig['targetColumn'], datasetTrainName=addSuffix(datasetConfig['datasetName'], 'train'), datasetValidationName=addSuffix(datasetConfig['datasetName'], 'evaluation'), teste=True)
+def montarDatasets() -> None:
+    # Sempre prepara/limpa o dataset unificado antes de gerar train/evaluation.
+    prepared = prepare_unified_dataset()
+    print(f"Dataset fonte preparado: {prepared}")
+
+    for cfg in datasetsConfigs():
+        montarDataSetTrainEvaluation(cfg, teste=False)
+        montarDataSetTrainEvaluation(cfg, teste=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     montarDatasets()
