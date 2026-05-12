@@ -2,8 +2,18 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
 from transformers import TrainingArguments, Trainer
+from pathlib import Path
 
-dataset = load_dataset("csv", data_files={"train": "datasets/dataset-assunto-train.csv", "test": "datasets/dataset-assunto-evaluation.csv"})
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
+
+dataset = load_dataset(
+    "csv",
+    data_files={
+        "train": str(DATASETS_DIR / "dataset-assunto-train.csv"),
+        "test": str(DATASETS_DIR / "dataset-assunto-evaluation.csv"),
+    },
+)
 
 model_checkpoint = "KassioLima/autotrain-yrpuv-1x07g"
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)

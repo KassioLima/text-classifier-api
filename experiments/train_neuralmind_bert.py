@@ -20,9 +20,9 @@ from transformers import (
 
 
 MODEL_NAME = "neuralmind/bert-base-portuguese-cased"
-ROOT_DIR = Path(__file__).resolve().parent
-DATASETS_DIR = ROOT_DIR / "datasets"
-OUTPUT_DIR = ROOT_DIR / "models_cardiffnlp_roberta"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
+OUTPUT_DIR = PROJECT_ROOT / "models_cardiffnlp_roberta"
 REPORTS_DIR = OUTPUT_DIR / "reports"
 
 

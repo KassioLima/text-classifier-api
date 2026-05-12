@@ -1,4 +1,5 @@
 .idea/
+.vscode/
 __pycache__/
 .env
 venv/
@@ -25,6 +26,9 @@ runs/
 
 # Datasets policy: keep generated/raw datasets local, only version test placeholders
 datasets/*
+!datasets/*.txt
+!datasets/scripts
+!datasets/scripts/*
 !datasets/teste/
 datasets/teste/*
 !datasets/teste/*.txt

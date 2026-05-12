@@ -20,9 +20,9 @@ from transformers import (
 
 
 MODEL_NAME = "neuralmind/bert-large-portuguese-cased"
-ROOT_DIR = Path(__file__).resolve().parent
-DATASETS_DIR = ROOT_DIR / "datasets"
-OUTPUT_BASE_DIR = ROOT_DIR / "models_neuralmind_bert_large"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
+OUTPUT_BASE_DIR = PROJECT_ROOT / "models"
 
 
 @dataclass(frozen=True)
@@ -248,7 +248,7 @@ def parse_args():
         help="Sobrescreve o minimo por tarefa. Exemplo: tipo=30 produto=30 assunto=50.",
     )
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output-subdir", type=str, default="", help="Subpasta dentro de models_neuralmind_bert_large para separar execucoes.")
+    parser.add_argument("--output-subdir", type=str, default="", help="Subpasta dentro de models para separar execucoes.")
     return parser.parse_args()
 
 

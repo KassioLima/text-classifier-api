@@ -1,1 +1,1 @@
-os datasets de teste serão criados neste diretório
+os datasets de teste serão criados automaticamente neste diretório. são datasets reduzidos apenas para fins de testes

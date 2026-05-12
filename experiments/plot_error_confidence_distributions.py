@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DEFAULT_INPUT = ROOT_DIR / "datasets" / "reports" / "joint_eval_full_without_postrule_with_confidence_2of3_only.json"
-DEFAULT_OUTPUT_HIST = ROOT_DIR / "datasets" / "reports" / "confidence_error_distribution_2of3_hist.png"
-DEFAULT_OUTPUT_BOX = ROOT_DIR / "datasets" / "reports" / "confidence_error_distribution_2of3_box.png"
-DEFAULT_OUTPUT_BINNED = ROOT_DIR / "datasets" / "reports" / "confidence_error_distribution_2of3_binned.png"
-DEFAULT_OUTPUT_DIR_PER_TASK = ROOT_DIR / "datasets" / "reports"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_INPUT = PROJECT_ROOT / "datasets" / "reports" / "joint_eval_full_without_postrule_with_confidence_2of3_only.json"
+DEFAULT_OUTPUT_HIST = PROJECT_ROOT / "datasets" / "reports" / "confidence_error_distribution_2of3_hist.png"
+DEFAULT_OUTPUT_BOX = PROJECT_ROOT / "datasets" / "reports" / "confidence_error_distribution_2of3_box.png"
+DEFAULT_OUTPUT_BINNED = PROJECT_ROOT / "datasets" / "reports" / "confidence_error_distribution_2of3_binned.png"
+DEFAULT_OUTPUT_DIR_PER_TASK = PROJECT_ROOT / "datasets" / "reports"
 
 
 TASKS = ("tipo", "produto", "assunto")

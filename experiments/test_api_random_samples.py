@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS
+from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=PROJECT_ROOT / "datasets" / "demandas_unificado_train_ready.json",
+        default=PROJECT_ROOT / "datasets" / "dataset_train_ready.json",
         help="Caminho do dataset JSON.",
     )
     parser.add_argument(

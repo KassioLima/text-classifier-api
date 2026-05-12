@@ -1,8 +1,17 @@
 import pandas as pd
-from api.service import AiModelProduto, AiModelService, AiModelAssunto, AiModelProdutoAssunto
 import matplotlib.pyplot as plt
 import seaborn as sns
 import asyncio
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from api.service import AiModelProduto, AiModelService, AiModelAssunto
+
+DATASET_PATH = PROJECT_ROOT / "datasets" / "dataset_train_ready.json"
 
 def obterMaxCaracteresFromModel() -> int:
     safetyValue = 40
@@ -10,7 +19,7 @@ def obterMaxCaracteresFromModel() -> int:
     return len(AiModelProduto.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)) - safetyValue
 
 def sumarizeModel(indexModel: int):
-    df = pd.read_json("datasets/database-email-sep.json")
+    df = pd.read_json(DATASET_PATH)
     
     AiModelProduto.init(modelIndex=indexModel)
     AiModelService.init(testing=True)
@@ -60,7 +69,7 @@ def count_characters(text):
     return len(str(text))
 
 def sumarizeDataset():
-    df = pd.read_json("datasets/database-email-sep.json")
+    df = pd.read_json(DATASET_PATH)
     df['text_length'] = df['DetalhesDaDemanda'].apply(count_characters)
     
     classSize = 1000
@@ -119,7 +128,9 @@ async def obterPercentualAcertosModelo(modelo, df, targetColumn):
         result = await AiModelService.classifyByAiModel(row['DetalhesDaDemanda'], modelo)
         
         if ',' not in targetColumn:
-            nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (result['label'] == row[targetColumn])]
+            predicted = str(result.get('classId', result.get('label')))
+            expected = str(row[targetColumn])
+            nova_linha = [result['milliseconds'], result['processedCharacteres'], result['score'], (predicted == expected)]
         else:
             columns = targetColumn.split(',')
             label = '{\'' + columns[0] + '\': \'' + row[columns[0]] + '\', \'' + columns[1] + '\': \'' + row[columns[1]] + '\'}'
@@ -156,12 +167,11 @@ async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetCo
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
 async def analizeModelsPerformance():
-    AiModelProdutoAssunto.init(modelIndex=0)
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
     AiModelService.init(testing=False)
     
-    df = pd.read_json("datasets/database-email-sep.json")
+    df = pd.read_json(DATASET_PATH)
     
     # df = df.sample(10)
     
@@ -170,9 +180,8 @@ async def analizeModelsPerformance():
     await obterPercentualAcertosModelo(AiModelAssunto, df, 'assunto')
     print("\n==============================================================")
     await obterPercentualAcertosModelosCombinados(AiModelProduto, AiModelAssunto, df, 'produto', 'assunto')
-    print("\n==============================================================")
-    await obterPercentualAcertosModelo(AiModelProdutoAssunto, df, 'produto,assunto')
 
-sumarizeDataset()
-compareModelsByTokensLimit()
-asyncio.run(analizeModelsPerformance())
+if __name__ == "__main__":
+    sumarizeDataset()
+    compareModelsByTokensLimit()
+    asyncio.run(analizeModelsPerformance())

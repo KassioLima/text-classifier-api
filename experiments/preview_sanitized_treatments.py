@@ -3,13 +3,16 @@ import json
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+import sys
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 from experiments.sanitize_text import sanitize_text
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DATASET_PATH = ROOT_DIR / "datasets" / "tbl_perm_acionamento_demanda.json"
-OUTPUT_PATH = ROOT_DIR / "datasets" / "reports" / "sanitized_treatments_preview.json"
+DATASET_PATH = PROJECT_ROOT / "datasets" / "tbl_perm_acionamento_demanda.json"
+OUTPUT_PATH = PROJECT_ROOT / "datasets" / "reports" / "sanitized_treatments_preview.json"
 
 
 def parse_date(value):

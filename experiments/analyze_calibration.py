@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DEFAULT_INPUT = ROOT_DIR / "datasets" / "reports" / "joint_eval_full_without_postrule_with_confidence.json"
-DEFAULT_OUTPUT_DIR = ROOT_DIR / "datasets" / "reports"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_INPUT = PROJECT_ROOT / "datasets" / "reports" / "joint_eval_full_without_postrule_with_confidence.json"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "datasets" / "reports"
 TASKS = ("tipo", "produto", "assunto")
 
 

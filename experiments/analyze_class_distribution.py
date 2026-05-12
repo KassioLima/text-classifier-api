@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DATASETS_DIR = ROOT_DIR / "datasets"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
 
 TASK_FILES = {
     "tipo": DATASETS_DIR / "dataset-tipo-train.csv",

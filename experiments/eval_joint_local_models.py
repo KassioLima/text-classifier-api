@@ -9,10 +9,10 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DEFAULT_DATASET = ROOT_DIR / "datasets" / "demandas_unificado_train_ready.json"
-DEFAULT_MODEL_ROOT = ROOT_DIR / "models_neuralmind_bert_large" / "lr2e5_bs4_ep4_tipo30_produto30_assunto50"
-DEFAULT_OUTPUT = ROOT_DIR / "datasets" / "reports" / "joint_eval_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DATASET = PROJECT_ROOT / "datasets" / "dataset_train_ready.json"
+DEFAULT_MODEL_ROOT = PROJECT_ROOT / "models" / "lr2e5_bs4_ep4_tipo30_produto30_assunto50"
+DEFAULT_OUTPUT = PROJECT_ROOT / "datasets" / "reports" / "joint_eval_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json"
 
 
 TASK_SPECS = {

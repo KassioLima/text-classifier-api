@@ -20,9 +20,9 @@ from transformers import (
 
 
 MODEL_NAME = "microsoft/mdeberta-v3-base"
-ROOT_DIR = Path(__file__).resolve().parent
-DATASETS_DIR = ROOT_DIR / "datasets"
-OUTPUT_DIR = ROOT_DIR / "models_v2"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
+OUTPUT_DIR = PROJECT_ROOT / "models_v2"
 REPORTS_DIR = OUTPUT_DIR / "reports"
 
 

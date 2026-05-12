@@ -20,9 +20,9 @@ from transformers import (
 
 
 MODEL_NAME = "FacebookAI/xlm-roberta-large"
-ROOT_DIR = Path(__file__).resolve().parent
-DATASETS_DIR = ROOT_DIR / "datasets"
-OUTPUT_DIR = ROOT_DIR / "models_xlm_roberta_large"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASETS_DIR = PROJECT_ROOT / "datasets"
+OUTPUT_DIR = PROJECT_ROOT / "models_xlm_roberta_large"
 REPORTS_DIR = OUTPUT_DIR / "reports"
 
 

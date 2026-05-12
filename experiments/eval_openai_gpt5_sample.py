@@ -8,13 +8,16 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from experiments.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS, labels_prompt_block
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS, labels_prompt_block
 from experiments.sanitize_text import sanitize_text
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-DATASET_PATH = ROOT_DIR / "datasets" / "demandas_unificado_train_ready.json"
-REPORTS_DIR = ROOT_DIR / "datasets" / "reports"
+DATASET_PATH = PROJECT_ROOT / "datasets" / "dataset_train_ready.json"
+REPORTS_DIR = PROJECT_ROOT / "datasets" / "reports"
 DEFAULT_OUTPUT = REPORTS_DIR / "openai_gpt5_sample_eval.json"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
