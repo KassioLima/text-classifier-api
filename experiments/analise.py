@@ -1,5 +1,5 @@
 import pandas as pd
-from service import AiModelProduto, AiModelService, AiModelAssunto, AiModelProdutoAssunto
+from api.service import AiModelProduto, AiModelService, AiModelAssunto, AiModelProdutoAssunto
 import matplotlib.pyplot as plt
 import seaborn as sns
 import asyncio

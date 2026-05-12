@@ -6,7 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from prepare_unified_dataset import prepare_unified_dataset
+from experiments.prepare_unified_dataset import prepare_unified_dataset
 
 
 BASE_DIR = Path(__file__).resolve().parent

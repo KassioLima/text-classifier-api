@@ -19,10 +19,11 @@ from transformers import (
 )
 
 
-MODEL_NAME = "neuralmind/bert-large-portuguese-cased"
+MODEL_NAME = "FacebookAI/xlm-roberta-large"
 ROOT_DIR = Path(__file__).resolve().parent
 DATASETS_DIR = ROOT_DIR / "datasets"
-OUTPUT_BASE_DIR = ROOT_DIR / "models_neuralmind_bert_large"
+OUTPUT_DIR = ROOT_DIR / "models_xlm_roberta_large"
+REPORTS_DIR = OUTPUT_DIR / "reports"
 
 
 @dataclass(frozen=True)
@@ -85,31 +86,15 @@ def compute_metrics(eval_pred):
     }
 
 
-class WeightedLossTrainer(Trainer):
-    def __init__(self, *args, class_weights: torch.Tensor, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.class_weights = class_weights
-
-    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-        labels = inputs.get("labels")
-        outputs = model(**inputs)
-        logits = outputs.get("logits") if isinstance(outputs, dict) else outputs.logits
-        loss_fct = torch.nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
-        loss = loss_fct(logits.view(-1, model.config.num_labels), labels.view(-1))
-        return (loss, outputs) if return_outputs else loss
-
-
 def train_one_task(
     cfg: TaskConfig,
     tokenizer,
     epochs: int,
     batch_size: int,
+    gradient_accumulation_steps: int,
     learning_rate: float,
     max_length: int,
     seed: int,
-    model_name: str,
-    output_dir: Path,
-    reports_dir: Path,
 ) -> dict:
     train_df = load_csv(cfg.train_csv)
     eval_df = load_csv(cfg.eval_csv)
@@ -117,10 +102,6 @@ def train_one_task(
     label_encoder = LabelEncoder()
     train_df["label"] = label_encoder.fit_transform(train_df["target"])
     eval_df["label"] = label_encoder.transform(eval_df["target"])
-    class_counts = np.bincount(train_df["label"], minlength=len(label_encoder.classes_))
-    safe_class_counts = np.clip(class_counts, 1, None)
-    class_weights = len(train_df) / (len(label_encoder.classes_) * safe_class_counts)
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
 
     train_ds = Dataset.from_pandas(train_df[["text", "label"]], preserve_index=False)
     eval_ds = Dataset.from_pandas(eval_df[["text", "label"]], preserve_index=False)
@@ -131,11 +112,11 @@ def train_one_task(
     train_ds = train_ds.map(tokenize_batch, batched=True)
     eval_ds = eval_ds.map(tokenize_batch, batched=True)
 
-    task_output = output_dir / cfg.task_name
+    task_output = OUTPUT_DIR / cfg.task_name
     task_output.mkdir(parents=True, exist_ok=True)
 
     model = AutoModelForSequenceClassification.from_pretrained(
-        model_name,
+        MODEL_NAME,
         num_labels=len(label_encoder.classes_),
         problem_type="single_label_classification",
     )
@@ -146,6 +127,7 @@ def train_one_task(
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
+        gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=learning_rate,
         weight_decay=0.01,
         evaluation_strategy="epoch",
@@ -153,16 +135,17 @@ def train_one_task(
         load_best_model_at_end=True,
         metric_for_best_model="f1_macro",
         greater_is_better=True,
-        save_total_limit=2,
+        save_total_limit=1,
         logging_strategy="steps",
         logging_steps=50,
         report_to="none",
         fp16=torch.cuda.is_available(),
         seed=seed,
         dataloader_num_workers=0,
+        save_safetensors=True,
     )
 
-    trainer = WeightedLossTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_ds,
@@ -170,7 +153,6 @@ def train_one_task(
         tokenizer=tokenizer,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         compute_metrics=compute_metrics,
-        class_weights=class_weights_tensor,
     )
 
     trainer.train()
@@ -188,36 +170,37 @@ def train_one_task(
 
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(len(label_encoder.classes_)))
     cm_df = pd.DataFrame(cm, index=label_encoder.classes_, columns=label_encoder.classes_)
-    cm_path = reports_dir / f"{cfg.task_name}_confusion_matrix.csv"
-    reports_dir.mkdir(parents=True, exist_ok=True)
+    cm_path = REPORTS_DIR / f"{cfg.task_name}_confusion_matrix.csv"
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     cm_df.to_csv(cm_path, encoding="utf-8")
 
     metrics = {
         "task": cfg.task_name,
-        "model_name": model_name,
+        "model_name": MODEL_NAME,
         "train_rows": int(len(train_df)),
         "eval_rows": int(len(eval_df)),
         "num_labels": int(len(label_encoder.classes_)),
-        "class_weights": [float(v) for v in class_weights.tolist()],
+        "effective_train_batch_size": int(batch_size * gradient_accumulation_steps),
+        "max_length": int(max_length),
         "best_checkpoint": trainer.state.best_model_checkpoint,
         "metrics": {k: float(v) for k, v in eval_metrics.items() if isinstance(v, (int, float))},
         "classes_path": str(classes_path),
         "confusion_matrix_path": str(cm_path),
     }
-    metrics_path = reports_dir / f"{cfg.task_name}_metrics.json"
+    metrics_path = REPORTS_DIR / f"{cfg.task_name}_metrics.json"
     metrics_path.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
     return metrics
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Treino baseline com neuralmind/bert-large-portuguese-cased para tipo/produto/assunto.")
+    parser = argparse.ArgumentParser(description="Treino com FacebookAI/xlm-roberta-large para tipo/produto/assunto.")
     parser.add_argument("--tasks", nargs="+", choices=sorted(TASKS.keys()), default=["tipo", "produto", "assunto"])
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--learning-rate", type=float, default=2e-5)
-    parser.add_argument("--max-length", type=int, default=512)
+    parser.add_argument("--batch-size", type=int, default=2)
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=4)
+    parser.add_argument("--learning-rate", type=float, default=1e-5)
+    parser.add_argument("--max-length", type=int, default=384)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output-subdir", type=str, default="", help="Subpasta dentro de models_neuralmind_bert_large para separar execucoes.")
     return parser.parse_args()
 
 
@@ -245,10 +228,7 @@ def merge_summary(summary_path: Path, current_results: list[dict]) -> list[dict]
 def main():
     args = parse_args()
     set_seed(args.seed)
-    selected_model_name = MODEL_NAME
-    tokenizer = AutoTokenizer.from_pretrained(selected_model_name, use_fast=True)
-    output_dir = OUTPUT_BASE_DIR / args.output_subdir if args.output_subdir else OUTPUT_BASE_DIR
-    reports_dir = output_dir / "reports"
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 
     summary = []
     for task in args.tasks:
@@ -258,18 +238,16 @@ def main():
             tokenizer=tokenizer,
             epochs=args.epochs,
             batch_size=args.batch_size,
+            gradient_accumulation_steps=args.gradient_accumulation_steps,
             learning_rate=args.learning_rate,
             max_length=args.max_length,
             seed=args.seed,
-            model_name=selected_model_name,
-            output_dir=output_dir,
-            reports_dir=reports_dir,
         )
         summary.append(result)
         print(f"[{task}] concluido. F1 macro: {result['metrics'].get('eval_f1_macro')}")
 
-    summary_path = reports_dir / "training_summary.json"
-    reports_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = REPORTS_DIR / "training_summary.json"
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     merged_summary = merge_summary(summary_path, summary)
     summary_path.write_text(json.dumps(merged_summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nResumo salvo em: {summary_path}")
