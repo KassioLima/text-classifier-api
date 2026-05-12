@@ -192,9 +192,8 @@ def extract_output_text(response: dict[str, Any]) -> str:
 
 
 def call_openai(prompt: str, model: str, timeout: int, max_output_tokens: int) -> tuple[dict[str, Any], dict[str, Any]]:
-    api_key = "OPENAI_API_KEY_REDACTED"
-    # api_key = os.getenv("OPENAI_API_KEY")
-    
+    api_key = os.getenv("OPENAI_API_KEY")
+
     if not api_key:
         raise RuntimeError("Defina a variavel de ambiente OPENAI_API_KEY antes de executar sem --dry-run.")
 
