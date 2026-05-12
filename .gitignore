@@ -8,6 +8,9 @@ venv/
 LM-Studio-*.AppImage
 models/*
 !models/*.txt
+models_*/
+models_cardiffnlp_roberta/
+models_neuralmind_bert_large/
 results/
 meu_modelo_treinado/
 modelo_salvo/
@@ -20,9 +23,8 @@ runs/
 *.pyd
 *.egg-info/
 
-# Datasets policy: keep only curated JSON + test placeholder
+# Datasets policy: keep generated/raw datasets local, only version test placeholders
 datasets/*
-!datasets/*.json
 !datasets/teste/
 datasets/teste/*
 !datasets/teste/*.txt

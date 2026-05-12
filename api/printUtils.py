@@ -1,4 +1,4 @@
-from constraints import Constraints
+from api.constraints import Constraints
 
 def greenText(text: str) -> str:
     return Constraints.greenColor + text + Constraints.endCor
