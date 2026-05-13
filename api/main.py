@@ -3,7 +3,7 @@ from api.CustomResponse import Response
 from fastapi import FastAPI
 
 from api.printUtils import greenText
-from api.service import AiModelService as AMS, AiModelProduto, AiModelAssunto, AiModelTipoDemanda
+from api.service import AiModelService as AMS, AiModelProduto, AiModelAssunto, AiModelTipo
 
 app = FastAPI()
 
@@ -11,7 +11,7 @@ app = FastAPI()
 async def startup_event():
     # Carrega os três modelos na subida da API para evitar latência alta
     # na primeira requisição de classificação.
-    AiModelTipoDemanda.init(modelIndex=0)
+    AiModelTipo.init(modelIndex=0)
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
     # Modo de teste permite forçar prompt fixo (ver service.py).

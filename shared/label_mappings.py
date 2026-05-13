@@ -1,4 +1,4 @@
-TIPO_DEMANDA_LABELS = {
+TIPO_LABELS = {
     10: "INFORMAÇÃO / DÚVIDA",
     20: "SOLICITAÇÃO",
     25: "SUGESTÃO",
@@ -49,8 +49,8 @@ def format_label_options(labels: dict[int, str]) -> str:
 
 def labels_prompt_block() -> str:
     return (
-        "Tipos de demanda:\n"
-        f"{format_label_options(TIPO_DEMANDA_LABELS)}\n\n"
+        "Tipos:\n"
+        f"{format_label_options(TIPO_LABELS)}\n\n"
         "Produtos:\n"
         f"{format_label_options(PRODUTO_LABELS)}\n\n"
         "Assuntos:\n"

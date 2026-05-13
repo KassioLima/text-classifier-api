@@ -2,7 +2,7 @@ import asyncio
 import time
 
 from api.constraints import Constraints
-from api.models import AiModelAssunto, AiModelProduto, AiModelTipoDemanda
+from api.models import AiModelAssunto, AiModelProduto, AiModelTipo
 from api.printUtils import greenText
 
 
@@ -78,7 +78,7 @@ class AiModelService:
         if AiModelService.promptTeste is not None:
             prompt = AiModelService.promptTeste
 
-        resultTipo = await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda)
+        resultTipo = await AiModelService.classifyByAiModel(prompt, AiModelTipo)
         resultProduto = await AiModelService.classifyByAiModel(prompt, AiModelProduto)
         resultAssunto = await AiModelService.classifyByAiModel(prompt, AiModelAssunto)
 
@@ -89,7 +89,7 @@ class AiModelService:
         if AiModelService.promptTeste is not None:
             prompt = AiModelService.promptTeste
 
-        result = await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda)
+        result = await AiModelService.classifyByAiModel(prompt, AiModelTipo)
 
         return {"tipo": result}
 
@@ -114,7 +114,7 @@ class AiModelService:
 
 __all__ = [
     "AiModelService",
-    "AiModelTipoDemanda",
+    "AiModelTipo",
     "AiModelProduto",
     "AiModelAssunto",
 ]

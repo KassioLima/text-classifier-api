@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS, labels_prompt_block
+from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_LABELS, labels_prompt_block
 from experiments.sanitize_text import sanitize_text
 
 
@@ -126,7 +126,7 @@ def expected_from_record(record: dict[str, Any]) -> dict[str, Any]:
     # Constrói o gabarito esperado (IDs + labels) a partir do dataset.
     return {
         "tipo_id": int(record["TipoDeDemanda"]),
-        "tipo_label": label_for(TIPO_DEMANDA_LABELS, record["TipoDeDemanda"]),
+        "tipo_label": label_for(TIPO_LABELS, record["TipoDeDemanda"]),
         "produto_id": int(record["produto"]),
         "produto_label": label_for(PRODUTO_LABELS, record["produto"]),
         "assunto_id": int(record["assunto"]),
@@ -158,8 +158,8 @@ def response_schema() -> dict[str, Any]:
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "tipo_id": {"type": "integer", "enum": sorted(TIPO_DEMANDA_LABELS)},
-            "tipo_label": {"type": "string", "enum": [TIPO_DEMANDA_LABELS[k] for k in sorted(TIPO_DEMANDA_LABELS)]},
+            "tipo_id": {"type": "integer", "enum": sorted(TIPO_LABELS)},
+            "tipo_label": {"type": "string", "enum": [TIPO_LABELS[k] for k in sorted(TIPO_LABELS)]},
             "produto_id": {"type": "integer", "enum": sorted(PRODUTO_LABELS)},
             "produto_label": {"type": "string", "enum": [PRODUTO_LABELS[k] for k in sorted(PRODUTO_LABELS)]},
             "assunto_id": {"type": "integer", "enum": sorted(ASSUNTO_LABELS)},
@@ -262,12 +262,12 @@ def sample_records(records: list[dict[str, Any]], sample_size: int, seed: int) -
         record
         for record in records
         if str(record.get("DetalhesDaDemanda") or "").strip()
-        and record.get("TipoDeDemanda") is not None
-        and record.get("produto") is not None
-        and record.get("assunto") is not None
-        and int(record["TipoDeDemanda"]) in TIPO_DEMANDA_LABELS
-        and int(record["produto"]) in PRODUTO_LABELS
-        and int(record["assunto"]) in ASSUNTO_LABELS
+           and record.get("TipoDeDemanda") is not None
+           and record.get("produto") is not None
+           and record.get("assunto") is not None
+           and int(record["TipoDeDemanda"]) in TIPO_LABELS
+           and int(record["produto"]) in PRODUTO_LABELS
+           and int(record["assunto"]) in ASSUNTO_LABELS
     ]
     if len(eligible) < sample_size:
         raise ValueError(f"Amostra solicitada ({sample_size}) maior que registros elegiveis ({len(eligible)}).")
@@ -298,7 +298,7 @@ def main() -> int:
         and record.get("produto") is not None
         and record.get("assunto") is not None
         and (
-            int(record["TipoDeDemanda"]) not in TIPO_DEMANDA_LABELS
+            int(record["TipoDeDemanda"]) not in TIPO_LABELS
             or int(record["produto"]) not in PRODUTO_LABELS
             or int(record["assunto"]) not in ASSUNTO_LABELS
         )

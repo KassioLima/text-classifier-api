@@ -1,11 +1,11 @@
 from .assunto import AiModelAssunto
 from .base import AiModelBase
 from .produto import AiModelProduto
-from .tipo_demanda import AiModelTipoDemanda
+from .tipo import AiModelTipo
 
 __all__ = [
     "AiModelBase",
-    "AiModelTipoDemanda",
+    "AiModelTipo",
     "AiModelProduto",
     "AiModelAssunto",
 ]

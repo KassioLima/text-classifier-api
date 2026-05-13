@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_LABELS
+from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_LABELS
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,7 +69,7 @@ def label_for(field: str, class_id: int | None) -> str:
     if class_id is None:
         return "DESCONHECIDO"
     if field == "tipo":
-        return TIPO_DEMANDA_LABELS.get(class_id, f"ID {class_id}")
+        return TIPO_LABELS.get(class_id, f"ID {class_id}")
     if field == "produto":
         return PRODUTO_LABELS.get(class_id, f"ID {class_id}")
     if field == "assunto":
