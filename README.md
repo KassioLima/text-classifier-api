@@ -8,7 +8,7 @@ Projeto para classificar automaticamente textos em 3 dimensões:
 - `produto`
 - `assunto`
 
-O objetivo é expor essa classificação via API para consumo do backend C# e reduzir esforço manual de triagem.
+O objetivo é expor essa classificação via API para consumo do backend e reduzir esforço manual de triagem.
 
 ---
 
