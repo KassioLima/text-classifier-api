@@ -34,6 +34,19 @@ Fluxo em alto nível:
 4. Traduz `classId` para `label` amigável via `shared/label_mappings.py`.
 5. Retorna o resultado no endpoint `/classify`.
 
+Observação de truncamento (limite de contexto por chamada):
+
+- A API trunca a entrada para no máximo **512 tokens** por dimensão, com `truncation=True`.
+- Configuração do limite: campo `tokens` em `api/models/tipo_demanda.py`, `api/models/produto.py` e `api/models/assunto.py`.
+- Aplicação do truncamento em runtime: `api/service.py` (método `classifyByAiModel`).
+- O que passar de 512 tokens é descartado naquela chamada (não há chunking automático no fluxo atual).
+
+Estimativa prática para PT-BR (aproximada):
+
+- **512 tokens** costumam ficar perto de **350 a 450 palavras**.
+- Em caracteres, costuma ficar na faixa de **2.000 a 3.000 caracteres** (variando com pontuação, números, siglas e termos técnicos).
+
+
 Arquivos principais:
 
 - `api/main.py`
