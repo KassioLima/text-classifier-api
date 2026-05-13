@@ -9,6 +9,10 @@ MODEL_ROOT = PROJECT_ROOT / "models" / "lr2e5_bs4_ep4_tipo30_produto30_assunto50
 
 
 class AiModelTipoDemanda(AiModelBase):
+    # Configuração da dimensão "tipo".
+    # O labelMap traduz classId numérico para nome amigável no retorno da API.
+    # Coloque seu modelo local ou do Hugging Face na lista abaixo para usá-lo.
+    # Certifique-se de que "AiModelTipoDemanda.init(modelIndex=0)" está apontando para o índice certo do modelo que deseja usar
     modelOptions = [
         {
             "path": str(MODEL_ROOT / "tipo"),

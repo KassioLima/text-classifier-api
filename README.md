@@ -1,6 +1,6 @@
 # text-classifier-api
 
-API de classificação de textos.
+API FastAPI para classificação de textos.
 
 Projeto para classificar automaticamente textos em 3 dimensões:
 
@@ -29,19 +29,19 @@ Este projeto resolve essa necessidade com uma API de classificação de textos q
 Fluxo em alto nível:
 
 1. Recebe o texto de entrada.
-2. Roda 3 modelos locais (um para cada dimensão).
+2. Roda 3 modelos (um para cada dimensão).
 3. Converte `LABEL_X` (Transformers) para `classId` via `classes.json`.
-4. Traduz `classId` para `label` amigável via [shared/label_mappings.py](shared/label_mappings.py).
+4. Traduz `classId` para `label` amigável via `shared/label_mappings.py`.
 5. Retorna o resultado no endpoint `/classify`.
 
 Arquivos principais:
 
-- [api/main.py](api/main.py)
-- [api/service.py](api/service.py)
-- [api/models/base.py](api/models/base.py)
-- [api/models/tipo_demanda.py](api/models/tipo_demanda.py)
-- [api/models/produto.py](api/models/produto.py)
-- [api/models/assunto.py](api/models/assunto.py)
+- `api/main.py`
+- `api/service.py`
+- `api/models/base.py`
+- `api/models/tipo_demanda.py`
+- `api/models/produto.py`
+- `api/models/assunto.py`
 
 Organização da camada de modelos:
 
@@ -49,7 +49,55 @@ Organização da camada de modelos:
 - `AiModelTipoDemanda`, `AiModelProduto`, `AiModelAssunto`: herdam da base e definem configuração específica por dimensão.
 - `AiModelService`: orquestra as inferências e monta a resposta da API.
 
-Modelos atuais:
+## 2.1) Como funciona a seleção de modelos por classificação
+
+Cada dimensão tem duas opções em `modelOptions`:
+
+- Opcao `0`: modelo no Hugging Face Hub.
+- Opcao `1`: modelo local em `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/...`.
+
+Implementação:
+
+- `AiModelTipoDemanda.modelOptions`: `api/models/tipo_demanda.py`
+- `AiModelProduto.modelOptions`: `api/models/produto.py`
+- `AiModelAssunto.modelOptions`: `api/models/assunto.py`
+
+Na inicialização da API, o código atual usa `modelIndex=0` para as 3 dimensões em `api/main.py`.
+
+Ou seja, por padrão, a API sobe usando os modelos do Hub. Para usar os modelos locais, altere o `modelIndex` de `0` para `1` nas três chamadas de init no startup.
+
+## 2.2) Cache dos modelos do Hugging Face
+
+Quando `modelIndex=0`:
+
+- Na primeira execução, modelo e tokenizer são baixados do Hub e gravados no cache local do Hugging Face.
+- Nas próximas execuções, os arquivos são lidos do cache local e não são baixados novamente.
+
+Se quiser forçar novo download para atualizar para a versão mais recente do Hub:
+
+1. Pare a API.
+2. Limpe o cache local do Hugging Face da máquina.
+3. Suba a API novamente para baixar os arquivos de novo.
+
+Observação: apagar todo o cache remove também outros modelos já baixados nessa máquina. Se preferir, remova apenas a pasta do repositório específico.
+
+### 2.3) Quais modelos são esses (BERT, DeBERTa, etc.)
+
+O nome `lr2e5_bs4_ep4_tipo30_produto30_assunto50` é o identificador do experimento treinado (hiperparâmetros + recortes mínimos por tarefa), e não o nome da arquitetura base.
+
+Arquitetura do modelo promovido (em uso na API):
+
+- Backbone: `neuralmind/bert-large-portuguese-cased` (**BERT Large em português**)
+- Tipo de tarefa: `AutoModelForSequenceClassification` (3 cabeças separadas: `tipo`, `produto`, `assunto`)
+- Script de treino do modelo promovido: `experiments/train_neuralmind_bert_large.py`
+
+Outras arquiteturas testadas no projeto (não promovidas como modelo atual):
+
+- `neuralmind/bert-base-portuguese-cased` (`experiments/train_neuralmind_bert.py`)
+- `microsoft/mdeberta-v3-base` (`experiments/train_mdeberta.py`)
+- `FacebookAI/xlm-roberta-large` (`experiments/train_xlm_roberta.py`)
+
+Modelos atuais (locais):
 
 - `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/tipo`
 - `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/produto`
@@ -102,17 +150,13 @@ Formato esperado (schema atual):
 
 Observação: `DetalhesDaDemanda` e `TipoDeDemanda` são nomes legados do dataset.
 
-Referência detalhada:
-
-- [datasets/README.md](datasets/README.md)
-
 ### 4.3 Gerar datasets de treino e validação
 
 ```powershell
 python datasets/scripts/init_datasets.py
 ```
 
-Saídas principais:
+Saidas principais:
 
 - `datasets/dataset-tipo-train.csv`
 - `datasets/dataset-tipo-evaluation.csv`
@@ -134,7 +178,12 @@ python experiments/train_neuralmind_bert_large.py `
   --output-subdir lr2e5_bs4_ep4_tipo30_produto30_assunto50
 ```
 
-### 4.5 Avaliar acerto conjunto (3/3)
+### 4.5 Avaliar acerto simultâneo das 3 classificações (tipo + produto + assunto)
+
+Esse passo mede o acerto conjunto por registro:
+
+- `3/3`: acertou as 3 dimensões ao mesmo tempo.
+- `2/3`, `1/3`, `0/3`: acertou parcialmente ou não acertou.
 
 ```powershell
 python experiments/eval_joint_local_models.py `
@@ -153,7 +202,7 @@ Health check:
 
 - `GET http://127.0.0.1:8000/apiStatus`
 
-Classificação:
+Classificacao:
 
 - `POST http://127.0.0.1:8000/classify`
 
@@ -167,25 +216,25 @@ Payload:
 
 ---
 
-## 5) O que foi testado até chegar ao modelo atual
+## 5) O que foi testado ate chegar ao modelo atual
 
 ### 5.1 Famílias de modelo e scripts explorados
 
-- [experiments/train_neuralmind_bert_large.py](experiments/train_neuralmind_bert_large.py) (modelo promovido)
-- [experiments/train_neuralmind_bert.py](experiments/train_neuralmind_bert.py)
-- [experiments/train_mdeberta.py](experiments/train_mdeberta.py)
-- [experiments/train_xlm_roberta.py](experiments/train_xlm_roberta.py)
+- `experiments/train_neuralmind_bert_large.py` (modelo promovido)
+- `experiments/train_neuralmind_bert.py`
+- `experiments/train_mdeberta.py`
+- `experiments/train_xlm_roberta.py`
 
 ### 5.2 Estratégias de avaliação local
 
 - Smoke test inicial (200 registros): `joint_eval_smoke_200.json`
-- Avaliação full sem pós-regra: `joint_eval_full_without_postrule.json`
-- Avaliação full com pós-regra de tipo: `joint_eval_full_with_tipo_postrule.json`
+- Avaliação full sem pos-regra: `joint_eval_full_without_postrule.json`
+- Avaliação full com pos-regra de tipo: `joint_eval_full_with_tipo_postrule.json`
 - Avaliação final do modelo atual: `joint_eval_full_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json`
 - Análise de confiança e calibração:
-  - `joint_eval_full_without_postrule_with_confidence.json`
-  - `calibration_summary.json`
-  - gráficos em `datasets/reports/`
+- `joint_eval_full_without_postrule_with_confidence.json`
+- `calibration_summary.json`
+- Graficos em `datasets/reports/`
 
 ### 5.3 Baseline com API externa (prompt engineering)
 
@@ -205,17 +254,17 @@ Fonte: relatórios `joint_eval*.json` em `datasets/reports/`.
 | Etapa | Amostras | 3/3 | 2/3 | 1/3 | 0/3 | Tipo | Produto | Assunto |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Smoke inicial (`joint_eval_smoke_200.json`) | 200 | 47.50% | 41.00% | 10.50% | 1.00% | 77.00% | 81.50% | 76.50% |
-| Full sem pós-regra (`joint_eval_full_without_postrule.json`) | 14.141 | 65.36% | 28.29% | 5.87% | 0.49% | 83.97% | 86.37% | 88.17% |
-| Full com pós-regra tipo (`joint_eval_full_with_tipo_postrule.json`) | 14.141 | 62.80% | 30.02% | 6.60% | 0.58% | 80.50% | 86.37% | 88.17% |
+| Full sem pos-regra (`joint_eval_full_without_postrule.json`) | 14.141 | 65.36% | 28.29% | 5.87% | 0.49% | 83.97% | 86.37% | 88.17% |
+| Full com pos-regra tipo (`joint_eval_full_with_tipo_postrule.json`) | 14.141 | 62.80% | 30.02% | 6.60% | 0.58% | 80.50% | 86.37% | 88.17% |
 | **Modelo atual** (`joint_eval_full_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json`) | **14.141** | **65.36%** | **28.29%** | **5.87%** | **0.49%** | **83.97%** | **86.37%** | **88.17%** |
 
-Observação: a pós-regra de tipo piorou o resultado conjunto, então a versão sem pós-regra foi mantida.
+Observação: a pos-regra de tipo piorou o resultado conjunto, então a versão sem pos-regra foi mantida.
 
 ### 6.2 Evolução de prompt (baseline GPT-5)
 
 Fonte: campo `accuracy` dos relatórios `openai_gpt5_sample*_eval.json`.
 
-| Relatório | Amostras | 3/3 (`all`) | Tipo | Produto | Assunto |
+| Relatério | Amostras | 3/3 (`all`) | Tipo | Produto | Assunto |
 |---|---:|---:|---:|---:|---:|
 | `openai_gpt5_sample_100_eval.json` | 100 | 7.00% | 49.00% | 27.00% | 54.00% |
 | `openai_gpt5_sample_100_v2_eval.json` | 100 | 11.00% | 54.00% | 49.00% | 57.00% |
@@ -228,30 +277,30 @@ Fonte: campo `accuracy` dos relatórios `openai_gpt5_sample*_eval.json`.
 
 ### 7.1 Qualidade (full eval local)
 
-Fonte: [datasets/reports/joint_eval_full_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json](datasets/reports/joint_eval_full_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json)
+Fonte: `datasets/reports/joint_eval_full_lr2e5_bs4_ep4_tipo30_produto30_assunto50.json`
 
 - Total avaliado: **14.141**
 - Acurácia por dimensão:
-  - Tipo: **83.97%**
-  - Produto: **86.37%**
-  - Assunto: **88.17%**
+- Tipo: **83.97%**
+- Produto: **86.37%**
+- Assunto: **88.17%**
 - Acerto conjunto:
-  - **3/3:** **65.36%**
-  - **2/3:** **28.29%**
-  - **1/3:** **5.87%**
-  - **0/3:** **0.49%**
+- **3/3:** **65.36%**
+- **2/3:** **28.29%**
+- **1/3:** **5.87%**
+- **0/3:** **0.49%**
 
 ### 7.2 Métricas de treino (modelo promovido)
 
-Fonte: [datasets/reports/training/lr2e5_bs4_ep4_tipo30_produto30_assunto50/training_summary.json](datasets/reports/training/lr2e5_bs4_ep4_tipo30_produto30_assunto50/training_summary.json)
+Fonte: `datasets/reports/training/lr2e5_bs4_ep4_tipo30_produto30_assunto50/training_summary.json`
 
 - `tipo` (min samples 30): eval accuracy **73.42%**, eval F1 weighted **73.41%**
 - `produto` (min samples 30): eval accuracy **77.39%**, eval F1 weighted **77.07%**
 - `assunto` (min samples 50): eval accuracy **75.98%**, eval F1 weighted **75.74%**
 
-### 7.3 Calibração
+### 7.3 Calibracao
 
-Fonte: [datasets/reports/calibration_summary.json](datasets/reports/calibration_summary.json)
+Fonte: `datasets/reports/calibration_summary.json`
 
 - ECE Tipo: **0.1350**
 - ECE Produto: **0.0834**
@@ -259,21 +308,21 @@ Fonte: [datasets/reports/calibration_summary.json](datasets/reports/calibration_
 
 ### 7.4 Desempenho (tempo de resposta)
 
-Medições observadas durante testes locais:
+Medicoes observadas durante testes locais:
 
-- Inferência por dimensão (exemplo real):
-  - Tipo: ~32 ms
-  - Produto: ~40 ms
-  - Assunto: ~35 ms
-  - Soma inferência: ~107 ms
-- Chamada fim-a-fim via backend C#: ~335 ms (incluindo overhead HTTP/app).
-- Teste de volume (`500` requisições): ~50 s totais (cerca de **10 req/s**) em ambiente local de teste.
+- Inferencia por dimensão (exemplo real):
+- Tipo: ~32 ms
+- Produto: ~40 ms
+- Assunto: ~35 ms
+- Soma inferência: ~107 ms
+- Chamada fim-a-fim via backend C#: ~335 ms (incluindo overhead HTTP/app)
+- Teste de volume (`500` requisições): ~50 s totais (cerca de **10 req/s**) em ambiente local de teste
 
 ---
 
-## 8) Observações finais
+## 8) Observacoes finais
 
 - O projeto está organizado para operar com modelo local, sem dependência externa em produção.
-- O mapeamento de labels está centralizado em [shared/label_mappings.py](shared/label_mappings.py).
+- O mapeamento de labels está centralizado em `shared/label_mappings.py`.
 - A camada de inferência foi separada em classes por dimensão com herança de uma base comum em `api/models/`, reduzindo duplicação e facilitando manutenção.
 - Recomenda-se versionar novos ciclos de treino por `output-subdir` e sempre gerar relatório full comparável antes de promover modelo.

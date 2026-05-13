@@ -15,6 +15,7 @@ TASK_FILES = {
 
 
 def load_counts(path: Path) -> pd.Series:
+    # Conta frequência por classe no dataset de treino da tarefa.
     if not path.exists():
         raise FileNotFoundError(f"Arquivo nao encontrado: {path}")
     df = pd.read_csv(path, encoding="utf-8", usecols=["target"])
@@ -24,6 +25,7 @@ def load_counts(path: Path) -> pd.Series:
 
 
 def summarize_task(task: str, min_samples: int) -> None:
+    # Mostra impacto de um corte mínimo de amostras por classe.
     counts = load_counts(TASK_FILES[task])
     kept = counts[counts >= min_samples]
     dropped = counts[counts < min_samples]
@@ -51,6 +53,7 @@ def parse_args():
 
 
 def main():
+    # Executa análise para as tarefas selecionadas via CLI.
     args = parse_args()
     for task in args.tasks:
         summarize_task(task, args.min_samples)

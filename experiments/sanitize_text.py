@@ -12,6 +12,7 @@ MULTISPACE_RE = re.compile(r"[ \t]+")
 
 
 def sanitize_text(text: str) -> str:
+    # Higieniza PII/identificadores para permitir uso em análise/benchmark sem expor dados sensíveis.
     sanitized = "" if text is None else str(text)
     sanitized = URL_RE.sub("<URL>", sanitized)
     sanitized = EMAIL_RE.sub("<EMAIL>", sanitized)

@@ -7,6 +7,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASETS_DIR = PROJECT_ROOT / "datasets"
 
+# Sandbox de experimentação rápida com Hugging Face Trainer (foco em assunto).
 dataset = load_dataset(
     "csv",
     data_files={
@@ -24,6 +25,7 @@ label2id = {label: i for i, label in enumerate(labels)}
 id2label = {i: label for label, i in label2id.items()}
 
 def tokenize_and_encode(examples):
+    # Tokeniza texto e converte label textual para ID numérico.
     tokenized = tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
     tokenized["label"] = [label2id[label] for label in examples["label"]]
     return tokenized
@@ -64,6 +66,7 @@ trainer = Trainer(
 
 trainer.train()
 
+# Exporta artefatos para reuso local após treino de prova de conceito.
 model.save_pretrained("./meu_modelo_treinado")
 tokenizer.save_pretrained("./meu_modelo_treinado")
 

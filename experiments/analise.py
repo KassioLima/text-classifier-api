@@ -14,11 +14,13 @@ from api.service import AiModelProduto, AiModelService, AiModelAssunto
 DATASET_PATH = PROJECT_ROOT / "datasets" / "dataset_train_ready.json"
 
 def obterMaxCaracteresFromModel() -> int:
+    # Estima limite prático de caracteres processáveis para o modelo carregado.
     safetyValue = 40
-    tokens = AiModelProduto.tokenizer.encode_plus(AiModelService.promptGigante, max_length=AiModelProduto.getModelAttr('tokens'), truncation=True, return_tensors="pt")
+    tokens = AiModelProduto.tokenizer.encode_plus(AiModelService.promptTeste, max_length=AiModelProduto.getModelAttr('tokens'), truncation=True, return_tensors="pt")
     return len(AiModelProduto.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)) - safetyValue
 
 def sumarizeModel(indexModel: int):
+    # Resume impacto de truncamento para uma opção de modelo.
     df = pd.read_json(DATASET_PATH)
     
     AiModelProduto.init(modelIndex=indexModel)
@@ -43,6 +45,7 @@ def sumarizeModel(indexModel: int):
     }
 
 def compareModelsByTokensLimit():
+    # Compara visualmente, por modelo, quantas demandas ficam dentro/fora do limite.
     modelOptions = AiModelProduto.modelOptions
     modelOptions.sort(key=lambda x: x["tokens"])
     sumariesModel = [sumarizeModel(i) for i in range(len(modelOptions))]
@@ -69,6 +72,7 @@ def count_characters(text):
     return len(str(text))
 
 def sumarizeDataset():
+    # Mostra distribuição de tamanho dos textos no dataset.
     df = pd.read_json(DATASET_PATH)
     df['text_length'] = df['DetalhesDaDemanda'].apply(count_characters)
     
@@ -119,6 +123,7 @@ def contarPercentualLinhas(rowNumber, dfLength):
         print(str(rowNumber).rjust(len(str(dfLength)), "0") + " / " + str(dfLength) + "\t" + str(int(rowNumber / dfLength * 100)) + "%")
     
 async def obterPercentualAcertosModelo(modelo, df, targetColumn):
+    # Mede acurácia de uma dimensão isolada e estatísticas de latência/confiabilidade.
     dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score', 'isCorrect'])
     
     print("\nAnalizando acertos para \"" + targetColumn + "\"...")
@@ -144,6 +149,7 @@ async def obterPercentualAcertosModelo(modelo, df, targetColumn):
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
 async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetColumnModelo1, targetColumnModelo2):
+    # Mede acerto combinado de duas dimensões no mesmo registro.
     dfAnalise = pd.DataFrame(columns=['milliseconds', 'textLen', 'score_' + targetColumnModelo1, 'score_' + targetColumnModelo2, 'isCorrect'])
     
     print("\nAnalizando acertos para \"" + targetColumnModelo1 + "\" e \"" + targetColumnModelo2 + "\"...")
@@ -167,6 +173,7 @@ async def obterPercentualAcertosModelosCombinados(modelo1, modelo2, df, targetCo
     print("\nAcertos: " + str(round(dfAnalise['isCorrect'].sum() / len(dfAnalise) * 100, 2)) + "% (" + str(dfAnalise['isCorrect'].sum()) + " / " + str(len(dfAnalise)) + ")")
     
 async def analizeModelsPerformance():
+    # Orquestra comparação de performance entre produto/assunto e combinação.
     AiModelProduto.init(modelIndex=0)
     AiModelAssunto.init(modelIndex=0)
     AiModelService.init(testing=False)

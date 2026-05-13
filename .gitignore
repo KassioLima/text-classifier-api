@@ -7,8 +7,7 @@ venv/
 
 # Huge/local binaries and training artifacts
 LM-Studio-*.AppImage
-models/*
-!models/*.txt
+/models/
 models_*/
 models_cardiffnlp_roberta/
 models_neuralmind_bert_large/
@@ -17,6 +16,16 @@ meu_modelo_treinado/
 modelo_salvo/
 logs/
 runs/
+
+# Ignore training checkpoints; keep only final exported model artifacts
+models/**/checkpoints/
+models/**/checkpoint-*/
+models/**/optimizer.pt
+models/**/scheduler.pt
+models/**/scaler.pt
+models/**/rng_state.pth
+models/**/trainer_state.json
+models/**/training_args.bin
 
 # Python cache/build artifacts
 *.pyc

@@ -52,6 +52,7 @@ TASKS = {
 
 
 def set_seed(seed: int) -> None:
+    # Reprodutibilidade: fixa seed para random, numpy e torch (CPU/GPU).
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -60,6 +61,7 @@ def set_seed(seed: int) -> None:
 
 
 def load_csv(path: Path) -> pd.DataFrame:
+    # Carrega CSV no formato esperado para treino: colunas text/target.
     if not path.exists():
         raise FileNotFoundError(f"Arquivo nao encontrado: {path}")
     df = pd.read_csv(path, encoding="utf-8")
@@ -74,6 +76,7 @@ def load_csv(path: Path) -> pd.DataFrame:
 
 
 def compute_metrics(eval_pred):
+    # Métricas calculadas a cada avaliação de época.
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=1)
     return {
@@ -86,6 +89,7 @@ def compute_metrics(eval_pred):
 
 
 class WeightedLossTrainer(Trainer):
+    # Trainer customizado para aplicar pesos por classe e reduzir impacto de desbalanceamento.
     def __init__(self, *args, class_weights: torch.Tensor, **kwargs):
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights
@@ -112,6 +116,8 @@ def train_one_task(
     output_dir: Path,
     reports_dir: Path,
 ) -> dict:
+    # Cada tarefa (tipo/produto/assunto) é treinada isoladamente:
+    # lê dados, filtra classes raras, treina, avalia e salva artefatos.
     train_df = load_csv(cfg.train_csv)
     eval_df = load_csv(cfg.eval_csv)
     original_train_rows = len(train_df)
@@ -137,6 +143,7 @@ def train_one_task(
     eval_df["label"] = label_encoder.transform(eval_df["target"])
     class_counts = np.bincount(train_df["label"], minlength=len(label_encoder.classes_))
     safe_class_counts = np.clip(class_counts, 1, None)
+    # Peso inversamente proporcional à frequência da classe.
     class_weights = len(train_df) / (len(label_encoder.classes_) * safe_class_counts)
     class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
 
@@ -194,6 +201,7 @@ def train_one_task(
     trainer.train()
     eval_metrics = trainer.evaluate()
 
+    # Salva modelo + tokenizer + mapeamento de classes usado pela API.
     trainer.save_model(str(task_output))
     tokenizer.save_pretrained(str(task_output))
 
@@ -272,6 +280,7 @@ def parse_min_samples_by_task(values: list[str]) -> dict[str, int]:
 
 
 def merge_summary(summary_path: Path, current_results: list[dict]) -> list[dict]:
+    # Atualiza resumo sem perder resultados de tarefas já treinadas anteriormente.
     existing_by_task = {}
     if summary_path.exists():
         try:
@@ -301,6 +310,7 @@ def main():
     output_dir = OUTPUT_BASE_DIR / args.output_subdir if args.output_subdir else OUTPUT_BASE_DIR
     reports_dir = output_dir / "reports"
 
+    # Loop principal: treina cada tarefa selecionada e consolida resultados no summary.
     summary = []
     for task in args.tasks:
         min_train_samples = min_samples_by_task.get(task, args.min_train_samples)

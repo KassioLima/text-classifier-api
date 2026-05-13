@@ -7,19 +7,21 @@ from api.printUtils import greenText
 
 
 class AiModelService:
-    promptGigante = None
+    promptTeste = None
     testingMode = False
 
     @staticmethod
     def init(testing: bool = False):
+        # Quando testing=True, todas as rotas usam um prompt controlado para validação local.
         AiModelService.testingMode = testing
 
         if AiModelService.testingMode:
-            AiModelService.promptGigante = Constraints.promptTeste
+            AiModelService.promptTeste = Constraints.promptTeste
             print(greenText("INFO:     Prompt de teste carregado."))
 
     @staticmethod
     def _extract_class_id(raw_label: str, classes):
+        # Converte labels do Transformers (ex.: LABEL_3) para classId real do classes.json.
         if not raw_label or classes is None:
             return None
         if not raw_label.startswith("LABEL_"):
@@ -34,20 +36,15 @@ class AiModelService:
 
     @staticmethod
     async def classifyByAiModel(prompt, AiModel):
+        # Pipeline de inferência de uma única dimensão:
+        # 1) mede tokens antes/depois de truncamento
+        # 2) executa classificador
+        # 3) enriquece saída com classId/label e métricas de execução
+        
         tempo_inicio = time.time()
-        num_tokens_before_truncation = AiModel.tokenizer.encode_plus(
-            prompt,
-            max_length=AiModel.model.config.max_position_embeddings,
-            truncation=False,
-            return_tensors="pt",
-        )["input_ids"].shape[1]
+        num_tokens_before_truncation = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.model.config.max_position_embeddings, truncation=False, return_tensors="pt")["input_ids"].shape[1]
 
-        tokens = AiModel.tokenizer.encode_plus(
-            prompt,
-            max_length=AiModel.getModelAttr("tokens"),
-            truncation=True,
-            return_tensors="pt",
-        )
+        tokens = AiModel.tokenizer.encode_plus(prompt, max_length=AiModel.getModelAttr("tokens"), truncation=True, return_tensors="pt")
         num_tokens = tokens["input_ids"].shape[1]
 
         decoded_prompt = AiModel.tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
@@ -77,8 +74,9 @@ class AiModelService:
 
     @staticmethod
     async def classify(prompt):
-        if AiModelService.promptGigante is not None:
-            prompt = AiModelService.promptGigante
+        # Classificação completa (3 dimensões). Mantido sequencial para facilitar rastreio.
+        if AiModelService.promptTeste is not None:
+            prompt = AiModelService.promptTeste
 
         resultTipo = await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda)
         resultProduto = await AiModelService.classifyByAiModel(prompt, AiModelProduto)
@@ -88,8 +86,8 @@ class AiModelService:
 
     @staticmethod
     async def classifyTipoDemanda(prompt):
-        if AiModelService.promptGigante is not None:
-            prompt = AiModelService.promptGigante
+        if AiModelService.promptTeste is not None:
+            prompt = AiModelService.promptTeste
 
         result = await AiModelService.classifyByAiModel(prompt, AiModelTipoDemanda)
 
@@ -97,8 +95,8 @@ class AiModelService:
 
     @staticmethod
     async def classifyProduto(prompt):
-        if AiModelService.promptGigante is not None:
-            prompt = AiModelService.promptGigante
+        if AiModelService.promptTeste is not None:
+            prompt = AiModelService.promptTeste
 
         result = await AiModelService.classifyByAiModel(prompt, AiModelProduto)
 
@@ -106,8 +104,8 @@ class AiModelService:
 
     @staticmethod
     async def classifyAssunto(prompt):
-        if AiModelService.promptGigante is not None:
-            prompt = AiModelService.promptGigante
+        if AiModelService.promptTeste is not None:
+            prompt = AiModelService.promptTeste
 
         result = await AiModelService.classifyByAiModel(prompt, AiModelAssunto)
 

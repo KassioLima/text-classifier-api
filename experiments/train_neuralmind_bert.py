@@ -53,6 +53,7 @@ TASKS = {
 
 
 def set_seed(seed: int) -> None:
+    # Reprodutibilidade entre execuções.
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -61,6 +62,7 @@ def set_seed(seed: int) -> None:
 
 
 def load_csv(path: Path) -> pd.DataFrame:
+    # Lê e valida o formato mínimo esperado para treino.
     if not path.exists():
         raise FileNotFoundError(f"Arquivo nao encontrado: {path}")
     df = pd.read_csv(path, encoding="utf-8")
@@ -75,6 +77,7 @@ def load_csv(path: Path) -> pd.DataFrame:
 
 
 def compute_metrics(eval_pred):
+    # Métricas por época para comparação entre execuções.
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=1)
     return {
@@ -96,6 +99,7 @@ def train_one_task(
     seed: int,
     model_name: str,
 ) -> dict:
+    # Treina uma tarefa por vez (tipo/produto/assunto) e salva artefatos.
     train_df = load_csv(cfg.train_csv)
     eval_df = load_csv(cfg.eval_csv)
 
@@ -156,6 +160,7 @@ def train_one_task(
     trainer.train()
     eval_metrics = trainer.evaluate()
 
+    # classes.json é consumido depois pela API para mapear LABEL_X -> classId.
     trainer.save_model(str(task_output))
     tokenizer.save_pretrained(str(task_output))
 
@@ -200,6 +205,7 @@ def parse_args():
 
 
 def merge_summary(summary_path: Path, current_results: list[dict]) -> list[dict]:
+    # Atualiza resumo sem descartar resultados anteriores de outras tarefas.
     existing_by_task = {}
     if summary_path.exists():
         try:
@@ -226,6 +232,7 @@ def main():
     selected_model_name = MODEL_NAME
     tokenizer = AutoTokenizer.from_pretrained(selected_model_name, use_fast=True)
 
+    # Loop principal de treino multi-tarefa (em arquivos separados por tarefa).
     summary = []
     for task in args.tasks:
         print(f"\n=== Treinando tarefa: {task} ===")

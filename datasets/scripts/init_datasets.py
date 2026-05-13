@@ -57,6 +57,7 @@ def to_test_name(path: Path) -> Path:
 
 
 def _read_source_df(json_source: Path, text_column: str, target_column: str) -> pd.DataFrame:
+    # Lê o JSON bruto e normaliza apenas as colunas necessárias para o treino.
     df = pd.read_json(json_source)
     required_columns = {text_column, target_column}
     missing = required_columns.difference(df.columns)
@@ -71,6 +72,7 @@ def _read_source_df(json_source: Path, text_column: str, target_column: str) -> 
 
 
 def _drop_rare_classes(df: pd.DataFrame, min_class_samples: int) -> tuple[pd.DataFrame, list[str]]:
+    # Remove classes com pouca representatividade para evitar split estratificado inválido.
     counts = df["target"].value_counts()
     keep_labels = counts[counts >= min_class_samples].index
     removed_labels = counts[counts < min_class_samples].index.tolist()
@@ -84,6 +86,7 @@ def _write_csv(df: pd.DataFrame, path: Path) -> None:
 
 
 def _validate_dataset(path: Path) -> None:
+    # Validação defensiva para garantir que o dataset gerado está pronto para treino.
     df = pd.read_csv(path, encoding="utf-8")
     if list(df.columns) != ["text", "target"]:
         raise ValueError(f"Colunas invalidas em {path}: {list(df.columns)}")
@@ -126,6 +129,8 @@ def _save_report(config_name: str, reports: Iterable[dict], extra: dict) -> Path
 
 
 def montarDataSetTrainEvaluation(config: DatasetConfig, teste: bool = False) -> None:
+    # Gera os pares train/evaluation para uma dimensão (tipo/produto/assunto),
+    # incluindo modo teste (amostra reduzida) para smoke tests rápidos.
     source_df = _read_source_df(JSON_DATASET_NAME, config.text_column, config.target_column)
     source_df = source_df.rename(columns={config.text_column: "text", config.target_column: "target"})
 
@@ -205,6 +210,7 @@ def montarDataSetTrainEvaluation(config: DatasetConfig, teste: bool = False) -> 
 
 
 def datasetsConfigs() -> list[DatasetConfig]:
+    # Mapeia como cada dimensão deve ser extraída do dataset fonte.
     return [
         DatasetConfig(
             name="tipo",
@@ -231,6 +237,7 @@ def datasetsConfigs() -> list[DatasetConfig]:
 
 
 def montarDatasets() -> None:
+    # Ponto de entrada para reproduzir geração dos datasets de todas as tarefas.
     print(f"Dataset fonte: {JSON_DATASET_NAME}")
 
     for cfg in datasetsConfigs():

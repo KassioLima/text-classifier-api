@@ -123,6 +123,7 @@ def label_for(labels: dict[int, str], value: Any) -> str:
 
 
 def expected_from_record(record: dict[str, Any]) -> dict[str, Any]:
+    # Constrói o gabarito esperado (IDs + labels) a partir do dataset.
     return {
         "tipo_id": int(record["TipoDeDemanda"]),
         "tipo_label": label_for(TIPO_DEMANDA_LABELS, record["TipoDeDemanda"]),
@@ -134,6 +135,7 @@ def expected_from_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_prompt(record_id: int, sanitized_text: str, prompt_version: str) -> str:
+    # Monta prompt versionado para permitir comparação entre estratégias de instrução.
     if prompt_version == "v2":
         rules = f"\n\n{CLASSIFICATION_RULES}"
     elif prompt_version == "v3":
@@ -151,6 +153,7 @@ def build_prompt(record_id: int, sanitized_text: str, prompt_version: str) -> st
 
 
 def response_schema() -> dict[str, Any]:
+    # Esquema estrito para forçar saída JSON com IDs válidos da taxonomia.
     return {
         "type": "object",
         "additionalProperties": False,
@@ -192,6 +195,7 @@ def extract_output_text(response: dict[str, Any]) -> str:
 
 
 def call_openai(prompt: str, model: str, timeout: int, max_output_tokens: int) -> tuple[dict[str, Any], dict[str, Any]]:
+    # Chamada HTTP direta para Responses API com saída estruturada.
     api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
@@ -253,6 +257,7 @@ def compare(expected: dict[str, Any], predicted: dict[str, Any]) -> dict[str, bo
 
 
 def sample_records(records: list[dict[str, Any]], sample_size: int, seed: int) -> list[dict[str, Any]]:
+    # Amostragem aleatória reproduzível do dataset para benchmark rápido.
     eligible = [
         record
         for record in records
@@ -299,6 +304,7 @@ def main() -> int:
         )
     )
 
+    # Loop de avaliação item a item, com comparação contra o gabarito.
     results = []
     for index, record in enumerate(selected, start=1):
         record_id = int(record.get("ID", index)) if str(record.get("ID", "")).isdigit() else index

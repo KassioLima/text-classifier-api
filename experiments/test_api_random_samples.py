@@ -15,6 +15,7 @@ from shared.label_mappings import ASSUNTO_LABELS, PRODUTO_LABELS, TIPO_DEMANDA_L
 
 
 def parse_args() -> argparse.Namespace:
+    # Configura dataset, endpoint e tamanho da amostra para teste rápido da API.
     parser = argparse.ArgumentParser(
         description="Testa exemplos aleatorios no endpoint /classify e compara com gabarito."
     )
@@ -45,6 +46,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    # Cliente HTTP simples para enviar prompt ao endpoint /classify.
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -114,6 +116,7 @@ def main() -> int:
     print(f"Testando {sample_size} exemplo(s) em {args.api_url}")
     print("-" * 80)
 
+    # Loop de teste: consulta API e compara campo a campo com o gabarito do dataset.
     for i, row in enumerate(selected, start=1):
         prompt = row["DetalhesDaDemanda"]
         gold = {

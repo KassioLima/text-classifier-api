@@ -16,6 +16,7 @@ OUTPUT_PATH = PROJECT_ROOT / "datasets" / "reports" / "sanitized_treatments_prev
 
 
 def parse_date(value):
+    # Aceita formatos ISO com/sem frações de segundo.
     if not value:
         return None
     text = str(value)
@@ -28,6 +29,7 @@ def parse_date(value):
 
 
 def latest_month(rows):
+    # Descobre automaticamente o mês mais recente disponível no dataset.
     months = Counter()
     for row in rows:
         dt = parse_date(row.get("DataCriacao"))
@@ -48,6 +50,7 @@ def main():
     rows = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     month = args.month or latest_month(rows)
 
+    # Gera amostra comparando original x sanitizado para inspeção manual.
     preview = []
     total = 0
     nonempty = 0

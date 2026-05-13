@@ -48,6 +48,7 @@ def parse_args():
 
 
 def load_confidences(path: Path, mode: str = "errors", correct_count_filter: int | None = None) -> dict[str, list[float]]:
+    # Carrega confiança por tarefa e permite filtrar por acertos/erros e faixa 2/3, 3/3 etc.
     if not path.exists():
         raise FileNotFoundError(f"Arquivo nao encontrado: {path}")
 
@@ -72,6 +73,7 @@ def load_confidences(path: Path, mode: str = "errors", correct_count_filter: int
 
 
 def plot_histograms(values: dict[str, list[float]], output: Path, bins: int) -> None:
+    # Distribuição (histograma + KDE) da confiança por tarefa.
     sns.set_theme(style="whitegrid")
     fig, axes = plt.subplots(1, 3, figsize=(18, 5), sharey=True)
     palette = {"tipo": "#1f77b4", "produto": "#2ca02c", "assunto": "#d62728"}
@@ -96,6 +98,7 @@ def plot_histograms(values: dict[str, list[float]], output: Path, bins: int) -> 
 
 
 def plot_box_violin(values: dict[str, list[float]], output: Path) -> None:
+    # Resumo visual por tarefa para comparar dispersão da confiança.
     sns.set_theme(style="whitegrid")
     x = []
     y = []
@@ -140,6 +143,7 @@ def assign_to_bins(data: list[float], bins: list[tuple[int, int]]) -> list[int]:
 
 
 def plot_grouped_binned_bars(values: dict[str, list[float]], output: Path, bin_width: int) -> None:
+    # Barras agrupadas por faixa de confiança para comparação direta entre tarefas.
     sns.set_theme(style="whitegrid")
     bins = build_bins(0, 100, bin_width)
     labels = [f"{lo}-{hi}" for lo, hi in bins]
@@ -174,6 +178,7 @@ def plot_per_task_binned(
     tag: str,
     label_kind: str = "casos",
 ) -> list[Path]:
+    # Gera gráficos dedicados por tarefa (mais fáceis para leitura operacional).
     sns.set_theme(style="whitegrid")
     output_dir.mkdir(parents=True, exist_ok=True)
     bins = build_bins(0, 100, bin_width)
@@ -219,6 +224,7 @@ def plot_per_task_zoom_90_100(
     tag: str,
     label_kind: str = "casos",
 ) -> list[Path]:
+    # Zoom na faixa 90-100 para inspecionar overconfidence em alta confiança.
     sns.set_theme(style="whitegrid")
     output_dir.mkdir(parents=True, exist_ok=True)
     bins = build_bins(90, 100, 1)

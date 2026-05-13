@@ -21,6 +21,7 @@ def parse_args():
 
 
 def load_records(path: Path):
+    # Lê resultados detalhados de avaliação (incluindo confiança por registro).
     payload = json.loads(path.read_text(encoding="utf-8"))
     records = payload.get("metrics", {}).get("record_results", [])
     if not records:
@@ -29,6 +30,7 @@ def load_records(path: Path):
 
 
 def get_task_data(records, task: str):
+    # Extrai vetores de confiança e acerto/erro para uma dimensão.
     conf = []
     correct = []
     for item in records:
@@ -40,6 +42,7 @@ def get_task_data(records, task: str):
 
 
 def compute_ece(conf: np.ndarray, correct: np.ndarray, n_bins: int):
+    # Calcula Expected Calibration Error (ECE) por bin de confiança.
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
     rows = []
@@ -67,6 +70,7 @@ def compute_ece(conf: np.ndarray, correct: np.ndarray, n_bins: int):
 
 
 def plot_reliability(task: str, rows, output: Path):
+    # Plota reliability diagram (confiança média x acurácia observada).
     centers = []
     accs = []
     counts = []
@@ -102,6 +106,7 @@ def main():
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Gera resumo por tarefa com ECE + artefatos visuais.
     summary = {}
     for task in TASKS:
         conf, correct = get_task_data(records, task)

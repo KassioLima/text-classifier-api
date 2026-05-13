@@ -23,6 +23,7 @@ TASK_SPECS = {
 
 
 def parse_args():
+    # Parâmetros para reproduzir avaliação conjunta com modelos locais exportados.
     parser = argparse.ArgumentParser(description="Avalia acerto conjunto (3/3) para tipo, produto e assunto.")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--model-root", type=Path, default=DEFAULT_MODEL_ROOT)
@@ -53,6 +54,7 @@ def load_json_records(path: Path) -> list[dict]:
 
 
 def load_model_bundle(model_dir: Path, device: torch.device):
+    # Carrega tokenizer/model/classes.json de uma dimensão específica.
     classes_path = model_dir / "classes.json"
     if not classes_path.exists():
         raise FileNotFoundError(f"classes.json nao encontrado em: {classes_path}")
@@ -78,6 +80,7 @@ def predict_labels_with_confidence(
     device: torch.device,
     max_length: int,
 ) -> tuple[list[str], list[float]]:
+    # Predição em batch com confiança (softmax) para reduzir custo de inferência.
     encoded = tokenizer(
         texts,
         padding=True,
@@ -95,6 +98,7 @@ def predict_labels_with_confidence(
 
 
 def build_filtered_dataset(records: list[dict], text_field: str, class_sets: dict[str, set[str]], limit: int) -> tuple[list[dict], dict]:
+    # Filtra registros inválidos e remove classes fora do vocabulário dos modelos.
     accepted = []
     dropped_missing = 0
     dropped_empty_text = 0
@@ -192,6 +196,7 @@ def score_patterns(text: str, patterns: list[str]) -> int:
 
 
 def apply_tipo_postrule(text: str, pred_tipo: str) -> str:
+    # Regra opcional de desambiguação entre tipo 10 e 20 baseada em padrões de texto.
     if pred_tipo not in {"10", "20"}:
         return pred_tipo
     normalized = text.lower()
@@ -216,6 +221,7 @@ def evaluate(
     top_k_errors: int,
     enable_tipo_postrule: bool,
 ):
+    # Avaliação principal: calcula acurácia por tarefa, acerto conjunto e análise de erros.
     total = len(records)
     task_correct = {task: 0 for task in TASK_SPECS}
     joint_3 = 0
@@ -385,6 +391,7 @@ def main():
         enable_tipo_postrule=args.enable_tipo_postrule,
     )
 
+    # Relatório final consolidado para análise posterior.
     output = {
         "dataset": str(args.dataset),
         "model_root": str(args.model_root),
