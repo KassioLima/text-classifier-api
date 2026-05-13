@@ -19,6 +19,7 @@ class AiModelTipoDemanda(AiModelBase):
     # Certifique-se de que "AiModelTipoDemanda.init(modelIndex=0)" está apontando para o índice certo do modelo que deseja usar
     # Se o repositório no Hub for privado, informe ACCESS_TOKEN com os.getenv(...)
     # apontando para a variável no .env (ex.: HUGGING_FACE_ACCESS_TOKEN).
+    
     modelOptions = [
         {
             "path": str(MODEL_ROOT / "tipo"),
