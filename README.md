@@ -51,10 +51,13 @@ Organização da camada de modelos:
 
 ## 2.1) Como funciona a seleção de modelos por classificação
 
-Cada dimensão tem duas opções em `modelOptions`:
+Estado atual do projeto:
 
-- Opcao `0`: modelo no Hugging Face Hub.
-- Opcao `1`: modelo local em `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/...`.
+- Cada dimensão (`tipo`, `produto`, `assunto`) possui apenas **1 opção** em `modelOptions`.
+- Essa opção atual é **modelo local em disco**:
+- `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/tipo`
+- `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/produto`
+- `models/lr2e5_bs4_ep4_tipo30_produto30_assunto50/assunto`
 
 Implementação:
 
@@ -62,24 +65,55 @@ Implementação:
 - `AiModelProduto.modelOptions`: `api/models/produto.py`
 - `AiModelAssunto.modelOptions`: `api/models/assunto.py`
 
-Na inicialização da API, o código atual usa `modelIndex=0` para as 3 dimensões em `api/main.py`.
+Na inicialização da API (`api/main.py`), o código usa `modelIndex=0` para as 3 dimensões.
+Como hoje existe só 1 opção por dimensão, `0` aponta para o modelo local.
 
-Ou seja, por padrão, a API sobe usando os modelos do Hub. Para usar os modelos locais, altere o `modelIndex` de `0` para `1` nas três chamadas de init no startup.
+## 2.2) Como usar modelo do Hugging Face (opcional)
 
-## 2.2) Cache dos modelos do Hugging Face
+Se quiser usar um modelo direto do Hugging Face Hub, adicione uma nova entrada em `modelOptions` da dimensão desejada.
 
-Quando `modelIndex=0`:
+Exemplo (segunda opção, índice `1`):
 
-- Na primeira execução, modelo e tokenizer são baixados do Hub e gravados no cache local do Hugging Face.
-- Nas próximas execuções, os arquivos são lidos do cache local e não são baixados novamente.
+```python
+{
+  "path": "org-ou-usuario/nome-do-modelo-no-hub",
+  "name": "nome-amigavel-no-retorno-da-api",
+  "ACCESS_TOKEN": os.getenv("HUGGING_FACE_ACCESS_TOKEN_TIPO"),  # opcional (necessário se repo privado)
+  "tokens": 512,
+  "task": "sentiment-analysis",
+  "labelMap": TIPO_DEMANDA_LABELS,
+}
+```
 
-Se quiser forçar novo download para atualizar para a versão mais recente do Hub:
+Depois, no startup da API, ajuste o índice:
 
-1. Pare a API.
-2. Limpe o cache local do Hugging Face da máquina.
-3. Suba a API novamente para baixar os arquivos de novo.
+- local: `AiModelTipoDemanda.init(modelIndex=0)`
+- hub: `AiModelTipoDemanda.init(modelIndex=1)`
 
-Observação: apagar todo o cache remove também outros modelos já baixados nessa máquina. Se preferir, remova apenas a pasta do repositório específico.
+Observação importante:
+
+- `ACCESS_TOKEN` em `modelOptions` é opcional.
+- Para modelo local ou repositório público, ele pode ficar ausente/`None`.
+- Para repositório privado no Hugging Face, ele deve ser preenchido com `os.getenv(...)`.
+
+### Repositório privado no Hugging Face
+
+Se o repositorio do modelo for privado, o `modelOptions` deve informar `ACCESS_TOKEN` carregado com `os.getenv(...)`.
+Para modelos locais/públicos, essa chave pode não existir.
+
+Exemplos:
+
+- tipo: `"ACCESS_TOKEN": os.getenv("HUGGING_FACE_ACCESS_TOKEN_TIPO")`
+- produto: `"ACCESS_TOKEN": os.getenv("HUGGING_FACE_ACCESS_TOKEN_PRODUTO")`
+- assunto: `"ACCESS_TOKEN": os.getenv("HUGGING_FACE_ACCESS_TOKEN_ASSUNTO")`
+
+Depois, crie um `.env` com base no `.env-example` e preencha os tokens:
+
+- `HUGGING_FACE_ACCESS_TOKEN_TIPO=`
+- `HUGGING_FACE_ACCESS_TOKEN_PRODUTO=`
+- `HUGGING_FACE_ACCESS_TOKEN_ASSUNTO=`
+
+Esses tokens são usados no carregamento (`from_pretrained`/`hf_hub_download`) para autenticar acesso a repositórios privados.
 
 ### 2.3) Quais modelos são esses (BERT, DeBERTa, etc.)
 

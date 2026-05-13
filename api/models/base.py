@@ -1,5 +1,4 @@
 import json
-import os
 from abc import ABC
 from pathlib import Path
 
@@ -24,8 +23,8 @@ class AiModelBase(ABC):
     classifier = None
 
     @classmethod
-    def getModelAttr(cls, attr: str):
-        return cls.modelOptions[cls.model_index][attr]
+    def getModelAttr(cls, attr: str, default=None):
+        return cls.modelOptions[cls.model_index].get(attr, default)
 
     @classmethod
     def init(cls, modelIndex: int):
@@ -33,7 +32,8 @@ class AiModelBase(ABC):
         # (ex.: local em disco vs Hugging Face Hub), sem mudar código de inferência.
         cls.model_index = modelIndex
         model_path = cls.getModelAttr("path")
-        token = os.getenv("HUGGING_FACE_ACCESS_TOKEN")
+        # O token já vem resolvido no modelOptions (campo ACCESS_TOKEN).
+        token = cls.getModelAttr("ACCESS_TOKEN")
         pretrained_kwargs = {"token": token} if token else {}
 
         cls.model = AutoModel.from_pretrained(model_path, **pretrained_kwargs)
